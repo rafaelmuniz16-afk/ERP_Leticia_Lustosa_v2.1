@@ -1,16 +1,14 @@
 // js/aurora/dispatcher.js
 
-// Normalizacao estrita do tipo: Nao adivinha nem converte erro para Ônus silenciosamente
 function normalizarTipoEstrito(valor) {
-  if (!valor) throw new Error('Tipo de encerramento obrigatorio. Opcoes: Ônus, Acordo ou Êxito.');
+  if (!valor) throw new Error('Tipo de encerramento obrigatório. Opções: Ônus, Acordo ou Êxito.');
   const limpo = String(valor).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
   if (limpo === 'exito' || limpo.includes('exit')) return 'Êxito';
   if (limpo === 'onus' || limpo.includes('onus')) return 'Ônus';
   if (limpo === 'acordo' || limpo.includes('acord')) return 'Acordo';
-  throw new Error('Tipo invalido ("' + valor + '"). Deve ser estritamente: Ônus, Acordo ou Êxito.');
+  throw new Error('Tipo inválido ("' + valor + '"). Deve ser estritamente: Ônus, Acordo ou Êxito.');
 }
 
-// Dicionario fonetico robusto para o Panjud
 function normalizarPanjud(valor, padrao = 'Não') {
   if (!valor) return padrao;
   const limpo = String(valor).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
@@ -30,7 +28,7 @@ function normalizarSimNaoEstrito(valor, campo = 'campo') {
   const limpo = String(valor).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
   if (['sim', 's', 'true', '1', 'positivo'].includes(limpo)) return 'Sim';
   if (['nao', 'n', 'false', '0', 'negativo'].includes(limpo)) return 'Não';
-  throw new Error('Valor invalido para ' + campo + ': "' + valor + '". Deve ser Sim ou Não.');
+  throw new Error('Valor inválido para ' + campo + ': "' + valor + '". Deve ser Sim ou Não.');
 }
 
 function formatarCNJAutomatico(valor, formatadorOriginal) {
@@ -59,9 +57,6 @@ export async function executarFerramenta(nome, args, ctx) {
   } = ctx;
 
   switch (nome) {
-    // -------------------------------------------------------------
-    // TOOL NOVA: SINCRONIZACAO DIRETA COM A NUVEM
-    // -------------------------------------------------------------
     case 'sincronizarERP': {
       if (typeof loadCloud === 'function') {
         await loadCloud(false);
@@ -159,17 +154,19 @@ export async function executarFerramenta(nome, args, ctx) {
         }
         return { status: 'sucesso', destino: destino };
       }
-      return { status: 'erro', mensagem: 'Secao nao encontrada: ' + destino };
+      return { status: 'erro', mensagem: 'Seção não encontrada: ' + destino };
     }
 
+    // CORREÇÃO: Dispara a atualização completa do ERP ao filtrar mês
     case 'filtrarTabela': {
       const { tipo, panjud, mes, busca } = args;
       if (tipo && $('filterTipo')) {$('filterTipo').value = tipo === 'Todos' ? 'Todos' : normalizarTipoEstrito(tipo);
       }
       if (panjud && $('filterEncerrado')) {$('filterEncerrado').value = panjud === 'Todos' ? 'Todos' : normalizarPanjud(panjud);
       }
-      if (mes && $('filterMonth')) {$('filterMonth').value = mes;
-        if (updateMetaInput) updateMetaInput();
+      if (mes && $('filterMonth')) {$('filterMonth').value = String(mes).padStart(2, '0');
+        // Dispara o evento 'change' nativo para rodar a lógica completa do ERP (localStorage, gráficos, etc.)
+        $('filterMonth').dispatchEvent(new Event('change'));
       }
       if (busca !== undefined && $('searchInput')) {$('searchInput').value = busca;
       }
@@ -178,9 +175,9 @@ export async function executarFerramenta(nome, args, ctx) {
       return { status: 'sucesso', mensagem: 'Filtros aplicados no ERP.' };
     }
 
+    // CORREÇÃO: Passa o mês alvo para o calculate() e obtém os dados corretos
     case 'consultarMetricas': {
       const mesConsultado = String(args.mes ? args.mes : getSelectedMonth()).padStart(2, '0');
-      // Passa o mês consultado para o calculate caso a função suporte mesOverride
       const c = (typeof calculate === 'function') ? calculate(mesConsultado) : {};
       
       return {
@@ -194,9 +191,7 @@ export async function executarFerramenta(nome, args, ctx) {
       };
     }
 
-    // -------------------------------------------------------------
-    // CADASTRO BLINDADO: CNJ ESTREITO + CONFIRMAÇÃO VISUAL
-    // -------------------------------------------------------------
+    // CORREÇÃO: Não aceita Panjud e Recusado como "Sim" silenciosamente
     case 'cadastrarCaso': {
       const { id, processo, tipo, data, mesReferencia, panjud, recusado, observacoes } = args;
 
@@ -205,12 +200,11 @@ export async function executarFerramenta(nome, args, ctx) {
       const digitos = processoFormatado.replace(/\D/g, '');
 
       if (digitos.length !== 20) {
-        throw new Error('Processo incompleto (' + digitos.length + '/20 digitos). O padrao CNJ exige 20 digitos.');
+        throw new Error('Processo incompleto (' + digitos.length + '/20 dígitos). O padrão CNJ exige 20 dígitos.');
       }
 
-      // Validação restaurada do dígito verificador CNJ
       if (typeof validarDigitoCNJ === 'function' && !validarDigitoCNJ(processoFormatado)) {
-        throw new Error('Digitos verificadores do processo CNJ invalidos.');
+        throw new Error('Dígitos verificadores do processo CNJ inválidos.');
       }
 
       let panjudHigienizado = normalizarPanjud(panjud, 'Não');
@@ -220,11 +214,11 @@ export async function executarFerramenta(nome, args, ctx) {
       if (/panjud[eg]?\s*(e|foi|ta|esta)?\s*(sim|ok|positivo)/i.test(obsTexto)) panjudHigienizado = 'Sim';
       if (/recusad[oa]\s*(no\s*panjud[eg]?)?\s*(e|foi|ta|esta)?\s*(sim|positivo)/i.test(obsTexto)) recusadoHigienizado = 'Sim';
 
+      // REGRA DE INTEGRIDADE: Bloqueia em vez de alterar silenciosamente
       if (panjudHigienizado === 'Sim' && recusadoHigienizado === 'Sim') {
-        recusadoHigienizado = 'Não';
+        throw new Error('Inconsistência: um caso não pode estar encerrado no Panjud (Sim) e Recusado no Panjud (Sim) ao mesmo tempo. Especifique se foi aceito ou recusado.');
       }
 
-      // Confirmação com SweetAlert antes de gravar
       if (typeof Swal !== 'undefined') {
         const confirmacao = await Swal.fire({
           title: 'Confirmar Cadastro?',
@@ -237,7 +231,7 @@ export async function executarFerramenta(nome, args, ctx) {
         });
 
         if (!confirmacao.isConfirmed) {
-          throw new Error('Cadastro cancelado pelo usuario.');
+          throw new Error('Cadastro cancelado pelo usuário.');
         }
       }
 
@@ -269,42 +263,36 @@ export async function executarFerramenta(nome, args, ctx) {
       };
     }
 
-    // -------------------------------------------------------------
-    // ALTERAR META: CONFIRMAÇÃO + AWAIT NUVEM OBRIGATÓRIO
-    // -------------------------------------------------------------
     case 'alterarMeta': {
       const { mes, valor } = args;
       const mesFormatado = String(mes).padStart(2, '0');
       const numValor = Number(valor);
 
       if (isNaN(numValor) || numValor < 0) {
-        throw new Error('Valor de meta invalido: ' + valor);
+        throw new Error('Valor de meta inválido: ' + valor);
       }
 
-      // Confirmação com SweetAlert
       if (typeof Swal !== 'undefined') {
         const confirmacao = await Swal.fire({
           title: 'Alterar Meta?',
-          text: `Deseja alterar a meta do mes ${mesFormatado} para ${numValor}?`,
+          text: `Deseja alterar a meta do mês ${mesFormatado} para ${numValor}?`,
           icon: 'warning',
           showCancelButton: true,
-          confirmButtonText: 'Confirmar alteracao',
+          confirmButtonText: 'Confirmar alteração',
           cancelButtonText: 'Cancelar',
           confirmButtonColor: '#4f46e5'
         });
 
         if (!confirmacao.isConfirmed) {
-          throw new Error('Alteracao de meta cancelada pelo usuario.');
+          throw new Error('Alteração de meta cancelada pelo usuário.');
         }
       }
 
-      // Espera a confirmação real da nuvem antes de alterar o estado local
       const mutacaoFn = serverMutation ? serverMutation : window.serverMutation;
       if (typeof mutacaoFn === 'function') {
         await mutacaoFn('salvarMeta', { mes: mesFormatado, meta: numValor });
       }
 
-      // Apenas se a nuvem confirmar com sucesso chegamos aqui:
       metas[mesFormatado] = numValor;
       localStorage.setItem('metas_oficial_leticia', JSON.stringify(metas));
       
@@ -324,14 +312,12 @@ export async function executarFerramenta(nome, args, ctx) {
 
     case 'gravarMemoria': {
       const { texto } = args;
-      if (!texto || !String(texto).trim()) throw new Error('Texto de memoria vazio.');
+      if (!texto || !String(texto).trim()) throw new Error('Texto de memória vazio.');
 
-      // Limite defensivo de tamanho por item de memória
       const textoLimpo = String(texto).trim().slice(0, 150);
 
-      // Trava de tamanho máximo no array de memórias (máximo 30 itens)
       if (memoriaIA.length >= 30) {
-        memoriaIA.shift(); // Remove a mais antiga
+        memoriaIA.shift();
       }
 
       memoriaIA.push(textoLimpo);
@@ -345,11 +331,11 @@ export async function executarFerramenta(nome, args, ctx) {
         }).catch(() => {});
       }
 
-      registrarLog('MEMORIA (AURORA)', '-', 'Anotacao: ' + textoLimpo);
+      registrarLog('MEMORIA (AURORA)', '-', 'Anotação: ' + textoLimpo);
       return { status: 'sucesso', memoriaSalva: textoLimpo };
     }
 
     default:
-      throw new Error('Ferramenta "' + nome + '" nao implementada.');
+      throw new Error('Ferramenta "' + nome + '" não implementada.');
   }
 }
