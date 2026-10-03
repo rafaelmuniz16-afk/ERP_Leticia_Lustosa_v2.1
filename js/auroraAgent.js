@@ -17,13 +17,13 @@ let chatHistory = [
   { role: 'assistant', content: 'Ola, Leticia! Eu sou a Aurora. Estou conectada ao ERP, pronta para operar o sistema, consultar dados e cadastrar casos por voz ou texto!' }
 ];
 
-// Modelos oficiais da Groq com suporte nativo a Tool Calling
+// Modelos validados pelo Rafa
 const MODELOS_GROQ = [
   'openai/gpt-oss-20b',
   'openai/gpt-oss-120b'
 ];
 
-async function chamarGroqComTools(mensagens, apiKey, usarTools = true) {
+async function chamarGroqComTools(mensagens, apiKey) {
   let ultimoErro = '';
 
   for (const model of MODELOS_GROQ) {
@@ -31,13 +31,10 @@ async function chamarGroqComTools(mensagens, apiKey, usarTools = true) {
       const payload = {
         model: model,
         messages: mensagens,
-        temperature: 0.1
+        temperature: 0.1,
+        tools: AURORA_TOOLS,
+        tool_choice: 'auto'
       };
-
-      if (usarTools) {
-        payload.tools = AURORA_TOOLS;
-        payload.tool_choice = 'auto';
-      }
 
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -52,14 +49,11 @@ async function chamarGroqComTools(mensagens, apiKey, usarTools = true) {
       if (!data.error) return data;
 
       ultimoErro = (data.error && data.error.message) ? data.error.message : 'Erro na Groq';
-      console.warn(`[Aurora] Tentativa com modelo ${model} retornou:`, data.error);
+      console.warn(`[Aurora] Tentativa com ${model} retornou:`, data.error);
 
-      // Se for limite de cota/minuto (429 ou 503), tenta o modelo reserva (8B)
-      if ([429, 503].includes(res.status) || /quota|rate limit|overloaded/i.test(ultimoErro)) {
+      if ([429, 503].includes(res.status) || /quota|rate limit/i.test(ultimoErro)) {
         continue;
       }
-
-      // Se for outro erro (ex: chave invalida), para na hora
       break;
     } catch (err) {
       ultimoErro = err.message;
@@ -99,71 +93,63 @@ export async function processarMensagemAurora(textoUsuario) {
   ];
 
   try {
-    const respostaGroq = await chamarGroqComTools(mensagensParaEnvio, apiKey, true);
-    if (indicadorCarregando && indicadorCarregando.parentNode) {
-      indicadorCarregando.remove();
-    }
+    let passos = 0;
+    const maxPassos = 4;
 
-    const escolha = (respostaGroq.choices && respostaGroq.choices[0]) ? respostaGroq.choices[0].message : null;
-    if (!escolha) throw new Error('Resposta vazia da Aurora.');
+    // Loop ReAct: A Aurora chama ferramentas e continua ate formular a resposta final
+    while (passos < maxPassos) {
+      passos++;
+      const respostaGroq = await chamarGroqComTools(mensagensParaEnvio, apiKey);
+      const escolha = (respostaGroq.choices && respostaGroq.choices[0]) ? respostaGroq.choices[0].message : null;
+      if (!escolha) throw new Error('Resposta vazia da Aurora.');
 
-    if (escolha.tool_calls && escolha.tool_calls.length > 0) {
-      mensagensParaEnvio.push(escolha);
-      chatHistory.push(escolha);
+      if (escolha.tool_calls && escolha.tool_calls.length > 0) {
+        mensagensParaEnvio.push(escolha);
+        chatHistory.push(escolha);
 
-      for (const chamada of escolha.tool_calls) {
-        const nomeFerramenta = chamada.function.name;
-        let args = {};
-        try {
-          args = JSON.parse(chamada.function.arguments || '{}');
-        } catch (e) {
-          args = {};
+        for (const chamada of escolha.tool_calls) {
+          const nomeFerramenta = chamada.function.name;
+          let args = {};
+          try {
+            args = JSON.parse(chamada.function.arguments || '{}');
+          } catch (e) {
+            args = {};
+          }
+
+          appendMessage('system', 'Executando acao: ' + nomeFerramenta + '...');
+
+          try {
+            const resultado = await executarFerramenta(nomeFerramenta, args, ctxApp);
+            const msgTool = {
+              role: 'tool',
+              tool_call_id: chamada.id,
+              name: nomeFerramenta,
+              content: typeof resultado === 'string' ? resultado : JSON.stringify(resultado)
+            };
+            mensagensParaEnvio.push(msgTool);
+            chatHistory.push(msgTool);
+          } catch (errErroFerramenta) {
+            const msgErro = {
+              role: 'tool',
+              tool_call_id: chamada.id,
+              name: nomeFerramenta,
+              content: JSON.stringify({ erro: errErroFerramenta.message })
+            };
+            mensagensParaEnvio.push(msgErro);
+            chatHistory.push(msgErro);
+          }
         }
-
-        appendMessage('system', 'Executando acao: ' + nomeFerramenta + '...');
-
-        try {
-          const resultado = await executarFerramenta(nomeFerramenta, args, ctxApp);
-          const msgTool = {
-            role: 'tool',
-            tool_call_id: chamada.id,
-            name: nomeFerramenta,
-            content: typeof resultado === 'string' ? resultado : JSON.stringify(resultado)
-          };
-          mensagensParaEnvio.push(msgTool);
-          chatHistory.push(msgTool);
-        } catch (errErroFerramenta) {
-          const msgErro = {
-            role: 'tool',
-            tool_call_id: chamada.id,
-            name: nomeFerramenta,
-            content: JSON.stringify({ erro: errErroFerramenta.message })
-          };
-          mensagensParaEnvio.push(msgErro);
-          chatHistory.push(msgErro);
+      } else {
+        // A Aurora concluiu as consultas e gerou a resposta definitiva em texto!
+        if (indicadorCarregando && indicadorCarregando.parentNode) {
+          indicadorCarregando.remove();
         }
+        const textoFinal = escolha.content ? escolha.content : 'Compreendido!';
+        chatHistory.push({ role: 'assistant', content: textoFinal });
+        appendMessage('bot', textoFinal);
+        falarResposta(textoFinal);
+        return;
       }
-
-      appendMessage('system', 'Finalizando resposta...');
-      const ind2 = containerMsgs ? containerMsgs.lastElementChild : null;
-      
-      const respostaFinal = await chamarGroqComTools(mensagensParaEnvio, apiKey, false);
-      if (ind2 && ind2.parentNode) {
-        ind2.remove();
-      }
-
-      const textoFinal = (respostaFinal.choices && respostaFinal.choices[0] && respostaFinal.choices[0].message && respostaFinal.choices[0].message.content) 
-        ? respostaFinal.choices[0].message.content 
-        : 'Acao concluida com sucesso!';
-      
-      chatHistory.push({ role: 'assistant', content: textoFinal });
-      appendMessage('bot', textoFinal);
-      falarResposta(textoFinal);
-    } else {
-      const textoDireto = escolha.content ? escolha.content : 'Compreendido!';
-      chatHistory.push({ role: 'assistant', content: textoDireto });
-      appendMessage('bot', textoDireto);
-      falarResposta(textoDireto);
     }
   } catch (errGeral) {
     if (indicadorCarregando && indicadorCarregando.parentNode) {
