@@ -49,7 +49,6 @@ async function chamarGroqComTools(mensagens, apiKey) {
       if (!data.error) return data;
 
       ultimoErro = (data.error && data.error.message) ? data.error.message : 'Erro na Groq';
-      console.warn('[Aurora] Tentativa com ' + model + ' retornou:', data.error);
 
       if ([429, 503].includes(res.status)) {
         continue;
@@ -66,34 +65,30 @@ async function chamarGroqComTools(mensagens, apiKey) {
   throw new Error(ultimoErro ? ultimoErro : 'Nenhum modelo da Groq respondeu.');
 }
 
-function ouvirProximaFalaModal() {
+function iniciarCicloEscutaModal() {
   if (!modoVozAtivo) return;
 
   const modalStatus = ctxApp.$('auroraVoiceStatus');
   const modalTranscript = ctxApp.$('auroraVoiceTranscript');
 
   if (modalStatus) modalStatus.textContent = 'Ouvindo você...';
-  if (modalTranscript) modalTranscript.textContent = 'Pode falar o próximo comando...';
+  if (modalTranscript) modalTranscript.textContent = 'Pode falar o que precisa...';
 
   iniciarEscuta({
     onInicio: () => {
       if (modalStatus) modalStatus.textContent = 'Ouvindo...';
     },
-    onResultado: (texto, isFinal) => {
-      if (modalTranscript) modalTranscript.textContent = texto;
-      if (isFinal && texto.trim()) {
-        if (modalStatus) modalStatus.textContent = 'Processando comando...';
-        processarMensagemAurora(texto.trim(), true);
-      }
+    onTranscricao: (textoEmTempoReal) => {
+      // Mostra as palavras aparecendo na hora enquanto você fala
+      if (modalTranscript) modalTranscript.textContent = textoEmTempoReal;
+    },
+    onFalaFinal: (comandoPronto) => {
+      if (modalStatus) modalStatus.textContent = 'Processando comando...';
+      processarMensagemAurora(comandoPronto, true);
     },
     onErro: (erro) => {
-      console.warn('Voz erro:', erro);
-      if (modoVozAtivo && modalStatus) {
-        modalStatus.textContent = 'Não ouvi bem, pode repetir?';
-        setTimeout(() => { if (modoVozAtivo) ouvirProximaFalaModal(); }, 1500);
-      }
-    },
-    onFim: () => {}
+      console.warn('Erro voz:', erro);
+    }
   });
 }
 
@@ -193,10 +188,11 @@ export async function processarMensagemAurora(textoUsuario, viaVoz = false) {
           const modalTranscript = $('auroraVoiceTranscript');
           if (modalTranscript) modalTranscript.textContent = textoFinal;
 
+          // Fala a resposta e REABRE A ESCUTA automaticamente quando terminar
           falarResposta(textoFinal, () => {
             if (modoVozAtivo) {
               setTimeout(() => {
-                ouvirProximaFalaModal();
+                iniciarCicloEscutaModal();
               }, 400);
             }
           });
@@ -210,8 +206,10 @@ export async function processarMensagemAurora(textoUsuario, viaVoz = false) {
     }
     appendMessage('bot', 'Ops! Nao consegui concluir o comando agora: ' + errGeral.message);
     if (viaVoz && modalStatus) {
-      modalStatus.textContent = 'Erro ao processar';
-      setTimeout(() => { if (modoVozAtivo) ouvirProximaFalaModal(); }, 1500);
+      modalStatus.textContent = 'Erro ao processar comando';
+      setTimeout(() => {
+        if (modoVozAtivo) iniciarCicloEscutaModal();
+      }, 1500);
     }
   }
 }
@@ -220,7 +218,6 @@ export function inicializarAuroraAgent(contexto) {
   ctxApp = contexto;
   const { $ } = contexto;
 
-  // Busca do botao de voz sem operador de barras verticais
   let btnVoz = $('btnVoiceInput');
   if (!btnVoz) {
     btnVoz = $('btnAiVoice');
@@ -248,7 +245,7 @@ export function inicializarAuroraAgent(contexto) {
 
         modoVozAtivo = true;
         if (modalVoz) modalVoz.classList.add('active');
-        ouvirProximaFalaModal();
+        iniciarCicloEscutaModal();
       };
     }
   }
