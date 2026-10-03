@@ -1,0 +1,8 @@
+/* Static component presentation extracted without changing property values. */
+.radar-section-label{margin-top:10px}
+#statusProgress{width:0%}
+#btnCancel{display:none}
+.analytics-section{margin-top:16px}
+.sort-field{min-width:110px}
+.page-size-field{min-width:95px}
+.server-confirmation-note{font-size:11px;color:var(--muted);margin-top:5px}

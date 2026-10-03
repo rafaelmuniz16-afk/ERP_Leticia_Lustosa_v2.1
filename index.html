@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERP Leticia Lustosa • Encerramentos 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+
+<link rel="stylesheet" href="css/themes/original.css" data-erp-stylesheet="original">
+<link rel="stylesheet" href="css/themes/claro.css" data-erp-stylesheet="claro">
+<link rel="stylesheet" href="css/themes/escuro.css" data-erp-stylesheet="escuro">
+<link rel="stylesheet" href="css/themes/natal.css" data-erp-stylesheet="natal">
+<link rel="stylesheet" href="css/themes/ano-novo.css" data-erp-stylesheet="ano-novo">
+<link rel="stylesheet" href="css/themes/pascoa.css" data-erp-stylesheet="pascoa">
+<link rel="stylesheet" href="css/themes/festa-junina.css" data-erp-stylesheet="festa-junina">
+<link rel="stylesheet" href="css/themes/halloween.css" data-erp-stylesheet="halloween">
+<link rel="stylesheet" href="css/themes/terror.css" data-erp-stylesheet="terror">
+<link rel="stylesheet" href="css/themes/cyberpunk.css" data-erp-stylesheet="cyberpunk">
+<link id="erp-theme-font" rel="stylesheet" disabled>
+<script src="js/themes/registry.js"></script>
+<script src="js/themes/assets.js"></script>
+<script src="js/themes/boot.js"></script>
+<link rel="stylesheet" href="css/settings.css">
+<link rel="stylesheet" href="css/compatibility.css">
+<link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+<div id="erp-theme-visuals"></div>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark"><svg viewBox="0 0 24 24" fill="none"><path d="M12 2.8 14.2 9.8 21.2 12l-7 2.2-2.2 7-2.2-7-7-2.2 7-2.2L12 2.8Z" fill="currentColor"/></svg></div>
+      <div><div class="brand-title">Leticia Lustosa</div><div class="brand-sub">ERP • Encerramentos 2026</div></div>
+    </div>
+
+    <div class="side-section">Navegação</div>
+    <nav class="nav">
+      <button class="nav-btn active" data-target="dashboard"><span class="nav-icon">⌂</span><span>Dashboard</span></button>
+      <button class="nav-btn" data-target="cadastro"><span class="nav-icon">＋</span><span>Novo registro</span></button>
+      <button class="nav-btn" data-target="historico"><span class="nav-icon">☷</span><span>Histórico</span></button>
+      <button class="nav-btn" id="btnNavAuditoria"><span class="nav-icon">▤</span><span>Auditoria</span></button>
+      <button class="nav-btn" id="openAiFromNav"><span class="nav-icon">✦</span><span>Aurora AI</span></button>
+<button type="button" class="nav-btn" id="erp-open-settings" aria-haspopup="dialog" aria-controls="erp-settings" title="Configurações"><span class="nav-icon" aria-hidden="true">⚙</span><span>Configurações</span></button>
+    </nav>
+
+    <div class="side-section radar-section-label">Radar Financeiro</div>
+    <div class="side-aurora-card" id="sideAuroraCard" title="Clique para avançar para a próxima métrica">
+      <div class="side-aurora-head">
+        <div class="side-aurora-avatar">✦</div>
+        <span class="side-aurora-name">Aurora Live</span>
+        <span class="side-aurora-tag">RADAR</span>
+      </div>
+      <div class="side-aurora-msg" id="sideAuroraMsg">A calcular indicadores operacionais... 📊</div>
+    </div>
+
+    <div class="side-card">
+      <div class="side-card-title">Conexão com a nuvem</div>
+      <div class="sync-line"><span><i class="status-dot" id="sideDot"></i><span id="sideStatus">Verificando…</span></span><span id="sideCount">0</span></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar" id="dashboard">
+      <div>
+        <div class="eyebrow">Painel operacional</div>
+        <h1 class="page-title">Encerramentos 2026</h1>
+        <p class="page-subtitle">Te Amo 💖</p>
+      </div>
+      <div class="top-actions"><button type="button" class="btn btn-soft" id="erp-open-settings-top" aria-haspopup="dialog" aria-controls="erp-settings">⚙ Configurações</button>
+        <button class="btn btn-soft" id="btnRefresh">↻ Atualizar</button>
+        <button class="btn btn-primary" id="btnAiTop">✦ Falar com Aurora</button>
+      </div>
+    </div>
+
+    <section class="filters">
+      <div class="field meta-box"><label>Mês de análise</label><select class="control" id="filterMonth"></select></div>
+      <div class="field meta-box"><label>Meta do mês</label><input class="control" id="metaInput" type="number" min="0" step="1"></div>
+      <div class="field"><label>Tipo</label><select class="control" id="filterTipo"><option>Todos</option><option>Ônus</option><option>Acordo</option><option>Êxito</option></select></div>
+      <div class="field"><label>Panjud</label><select class="control" id="filterEncerrado"><option>Todos</option><option>Sim</option><option>Não</option></select></div>
+      <div class="field"><label>Buscar por</label><select class="control" id="searchType"><option value="id">ID do caso</option><option value="processo">Processo</option></select></div>
+      <div class="field grow"><label>Pesquisa</label><input class="control" id="searchInput" placeholder="Digite ID ou número do processo…"></div>
+    </section>
+
+    <section class="status" id="statusBanner">
+      <div class="status-left"><span class="status-ring"></span><div><div class="status-title" id="statusTitle">Carregando status…</div><div class="status-sub" id="statusSub">Calculando desempenho da meta.</div></div></div>
+      <div class="progress"><div id="statusProgress" class="status-progress-initial"></div></div>
+    </section>
+
+    <section class="grid kpi-grid">
+      <div class="kpi tone-info"><div class="kpi-icon">◎</div><div class="kpi-label">Encerramentos</div><div class="kpi-value" id="m5_quant">0</div><div class="kpi-note">Quantidade cadastrada no mês</div></div>
+      <div class="kpi tone-warning"><div class="kpi-icon">↯</div><div class="kpi-label">Recusados Panjud</div><div class="kpi-value" id="m8_recusados">0</div><div class="kpi-note">Retirados do total efetivo</div></div>
+      <div class="kpi tone-success"><div class="kpi-icon">✓</div><div class="kpi-label">Encerramentos reais</div><div class="kpi-value" id="m7_reais">0</div><div class="kpi-note">Somente Panjud = Sim</div></div>
+      <div class="kpi tone-danger"><div class="kpi-icon">!</div><div class="kpi-label">Falta para a meta real</div><div class="kpi-value" id="falta_reais">0</div><div class="kpi-note" id="meta_diaria">0 casos/dia</div></div>
+    </section>
+
+    <section class="grid content-grid" id="cadastro">
+      <div class="panel">
+        <div class="panel-head">
+          <div><h2 class="panel-title"><span class="section-cute">Produção e desempenho</span></h2><div class="panel-sub">Distribuição dos encerramentos no mês selecionado.</div></div>
+        </div>
+        <div class="panel-body">
+          <div class="grid analytics">
+            <div class="chart-box"><div class="chart-wrap"><canvas id="tiposChart"></canvas></div></div>
+            <div class="summary-list">
+              <div class="summary-row"><span>Ônus</span><strong id="count_onus">0</strong></div>
+              <div class="summary-row"><span>Acordo</span><strong id="count_acordo">0</strong></div>
+              <div class="summary-row"><span>Êxito</span><strong id="count_exito">0</strong></div>
+              <div class="summary-row summary-highlight"><span>Encerramentos totais</span><strong id="m6_totais">0</strong></div>
+              <div class="summary-row"><span>Faltam em quantidade</span><strong id="falta_quant">0</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel form-panel">
+        <div class="panel-head">
+          <div><h2 class="panel-title" id="formTitle">Novo registro</h2><div class="panel-sub">A alteração só aparece como salva após confirmação da nuvem.</div></div>
+          <button class="btn btn-soft cancel-button-initial" id="btnCancel">Cancelar</button>
+        </div>
+        <div class="panel-body">
+          <form id="processForm">
+            <div class="grid two"><div class="form-group"><label>ID do caso</label><input id="idCaso" class="control" required></div><div class="form-group"><label>Número do processo</label><input id="numProcesso" class="control" inputmode="numeric" placeholder="0000000-00.0000.0.00.0000" aria-describedby="cnjHelp" required><small id="cnjHelp" class="cnj-help">Padrão CNJ: 20 dígitos. A formatação é automática.</small></div></div>
+            <div class="grid two"><div class="form-group"><label>Tipo</label><select id="tipoEncerramento" class="control" required><option>Ônus</option><option>Acordo</option><option>Êxito</option></select></div><div class="form-group"><label>Data finalizado</label><input id="dataEncerramento" type="date" class="control" required></div></div>
+            <div class="grid two"><div class="form-group"><label>Mês de referência</label><select id="mesReferenciaForm" class="control" required></select></div><div class="form-group"><label>Encerrado no Panjud?</label><select id="panjud" class="control" required><option>Não</option><option>Sim</option></select></div></div>
+            <div class="grid two"><div class="form-group"><label>Recusado no Panjud?</label><select id="recusado" class="control" required><option>Não</option><option>Sim</option></select></div><div class="form-group"><label>Observações</label><input id="observacoes" class="control" maxlength="500"></div></div>
+            <div class="form-actions"><button class="btn btn-primary" id="btnSubmit" type="submit">✓ Salvar registro</button><button class="btn btn-soft" type="button" id="btnReset">Limpar</button></div>
+            <div class="hint">Dica Turbo: use <b>Enter</b> para navegar entre os campos ou <b>Ctrl + Enter</b> para salvar a qualquer momento! ⚡</div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid analytics analytics-section">
+      <div class="panel">
+        <div class="panel-head"><div><h2 class="panel-title"><span class="section-cute">Evolução diária</span></h2><div class="panel-sub">Quantidade de encerramentos por dia.</div></div></div>
+        <div class="panel-body"><div class="chart-box"><div class="chart-wrap"><canvas id="linhaChart"></canvas></div></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><div><h2 class="panel-title"><span class="section-cute">Atingimento da meta</span></h2><div class="panel-sub">Quantidade, totais e reais.</div></div></div>
+        <div class="panel-body">
+          <div class="summary-list">
+            <div class="summary-row"><span>Quantidades</span><strong id="labelQuant">0 / 0</strong></div>
+            <div class="summary-row"><span>Totais</span><strong id="labelTotais">0 / 0</strong></div>
+            <div class="summary-row summary-highlight"><span>Reais</span><strong id="labelReais">0 / 0</strong></div>
+            <div class="summary-row"><span>Meta diária restante</span><strong id="meta_diaria_2">0 casos/dia</strong></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid finance-grid">
+      <div class="panel finance-card">
+        <div class="panel-head"><div><h2 class="panel-title"><span class="section-cute">Ganho real atual</span></h2><div class="panel-sub">Faixa calculada pela % da meta real.</div></div></div>
+        <div class="panel-body">
+          <div class="money-row"><span>Ônus</span><strong id="val_real_onus">R$ 0,00</strong></div>
+          <div class="money-row"><span>Acordo</span><strong id="val_real_acordo">R$ 0,00</strong></div>
+          <div class="money-row"><span>Êxito</span><strong id="val_real_exito">R$ 0,00</strong></div>
+          <div class="money-row money-total"><span>Valor final</span><strong id="val_real_total">R$ 0,00</strong></div>
+        </div>
+      </div>
+      <div class="panel finance-card">
+        <div class="panel-head"><div><h2 class="panel-title"><span class="section-cute">Simulação a 100%</span></h2><div class="panel-sub">Referência: 4 / 3 / 2 por tipo.</div></div></div>
+        <div class="panel-body">
+          <div class="money-row"><span>Ônus × R$ 4</span><strong id="val_100_onus">R$ 0,00</strong></div>
+          <div class="money-row"><span>Acordo × R$ 3</span><strong id="val_100_acordo">R$ 0,00</strong></div>
+          <div class="money-row"><span>Êxito × R$ 2</span><strong id="val_100_exito">R$ 0,00</strong></div>
+          <div class="money-row money-total"><span>Valor final</span><strong id="val_100_total">R$ 0,00</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel table-panel" id="historico">
+      <div class="panel-head">
+        <div><h2 class="panel-title"><span class="section-cute">Histórico de casos</span></h2><div class="panel-sub">Filtros globais aplicados ao mês selecionado.</div></div>
+        <div class="table-tools">
+          <div class="field sort-field"><label>Ordem (Data)</label><select class="control" id="sortOrder"><option value="desc">Mais recentes</option><option value="asc">Mais antigos</option></select></div>
+          <div class="field"><label>De (Data)</label><input type="date" class="control" id="dateStart"></div>
+          <div class="field"><label>Até (Data)</label><input type="date" class="control" id="dateEnd"></div>
+          <div class="field page-size-field"><label>Mostrar</label><select class="control" id="pageSize"><option>15</option><option>50</option><option>100</option><option>200</option><option>500</option></select></div>
+        </div>
+      </div>
+      <div class="table-wrap"><table class="table"><thead><tr><th>ID</th><th>Processo</th><th>Tipo</th><th>Data</th><th>Mês</th><th>Panjud</th><th>Recusado</th><th>Observações</th><th>Ações</th></tr></thead><tbody id="recordsTable"></tbody></table></div>
+      <div class="pagination"><button class="btn btn-soft" id="btnPrevPage">← Anterior</button><span id="pageInfo">Página 1 de 1</span><button class="btn btn-soft" id="btnNextPage">Próxima →</button></div>
+    </section>
+  </main>
+</div>
+
+<div class="floating-window" id="winAuditoria">
+  <div class="win-header" id="winAuditoriaHeader">
+    <div class="win-title"><span class="section-cute">Diário de Auditoria</span></div>
+    <button type="button" class="win-btn-close" id="btnCloseAuditoria" title="Fechar">×</button>
+  </div>
+  <div class="win-sub">Registro imutável de ações para resguardo e conferência. (Arraste pelo topo ou redimensione na ponta)</div>
+  <div class="win-body table-wrap">
+    <table class="table">
+      <thead><tr><th>Data/Hora</th><th>Ação</th><th>ID do Caso</th><th>Detalhes do Movimento</th></tr></thead>
+      <tbody id="logsTable"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="ai-drawer" id="aiDrawer" aria-hidden="true">
+  <div class="ai-backdrop" id="aiBackdrop"></div>
+  <aside class="ai-panel">
+    <div class="ai-head">
+      <div class="ai-brand">
+        <div class="ai-logo">✦</div>
+        <div><div class="ai-title">Aurora AI</div><div class="ai-state" id="aiState">Assistente administrativa</div></div>
+      </div>
+      <div class="ai-tools"><button class="btn btn-soft" id="btnAiKey">⚿</button><button class="btn btn-soft" id="btnAiClose">×</button></div>
+    </div>
+    <div class="ai-body" id="chatMessages"></div>
+    <div class="ai-compose">
+      <div class="compose-wrap">
+        <textarea id="chatInputText" rows="1" placeholder="Ex.: cadastre o caso 123…"></textarea>
+        <button class="send-btn" id="btnChatSend">➤</button>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<div class="loading" id="loading">
+  <div class="loading-card"><div class="spinner"></div><strong id="loadingTitle">Sincronizando…</strong><div class="server-confirmation-note">Aguarde a confirmação do servidor.</div></div>
+</div>
+
+<dialog id="erp-settings" aria-labelledby="erp-settings-title" aria-describedby="erp-settings-description">
+  <header class="erp-settings-header">
+    <div><p class="erp-settings-kicker">SEU ESPAÇO DE TRABALHO</p><h2 id="erp-settings-title">Configurações</h2></div>
+    <button type="button" class="erp-close" id="erp-close-settings" aria-label="Fechar configurações">✕</button>
+  </header>
+  <div class="erp-settings-body">
+    <nav class="erp-settings-nav" aria-label="Seções das configurações"><a href="#erp-themes-section" aria-current="page">◐ Temas</a></nav>
+    <section id="erp-themes-section" aria-labelledby="erp-themes-title">
+      <div class="erp-section-heading"><div><h3 id="erp-themes-title">Um ERP. Dez identidades.</h3><p id="erp-settings-description">Escolha o visual do seu espaço. A mudança é aplicada na hora.</p></div><span class="erp-active-pill" id="erp-active-label"></span></div>
+      <div class="erp-theme-grid" id="erp-theme-grid" role="group" aria-label="Temas disponíveis"></div>
+      <fieldset class="erp-options"><legend>Organização da tela</legend>
+        <label>Menu principal<select id="erp-layout"><option value="auto">Padrão do tema</option><option value="side">Lateral</option><option value="top">Superior</option></select></label>
+        <label>Densidade<select id="erp-density"><option value="auto">Padrão do tema</option><option value="compact">Compacta</option><option value="comfortable">Confortável</option></select></label>
+        <label class="erp-effects-label"><input type="checkbox" id="erp-effects"> Efeitos decorativos</label></fieldset>
+      <p class="erp-settings-help">Preferência salva neste navegador. No celular, o menu se adapta ao espaço disponível.</p>
+    </section>
+  </div>
+  <footer class="erp-settings-footer"><p id="erp-theme-status" role="status" aria-live="polite" aria-atomic="true"></p><button type="button" class="erp-reset" id="erp-reset-theme">Restaurar Original</button></footer>
+</dialog>
+
+<script src="js/core/config-state.js" defer></script>
+<script src="js/core/helpers.js" defer></script>
+<script src="js/core/audit-log.js" defer></script>
+<script src="js/core/cloud-api.js" defer></script>
+<script src="js/core/calculations.js" defer></script>
+<script src="js/core/render.js" defer></script>
+<script src="js/core/records.js" defer></script>
+<script src="js/core/diagnostics.js" defer></script>
+<script src="js/core/aurora.js" defer></script>
+<script src="js/core/audit-window.js" defer></script>
+<script src="js/forms/cnj.js" defer></script>
+<script src="js/core/init.js" defer></script>
+<script src="js/themes/effects/registry.js" defer></script>
+<script src="js/themes/effects/original.js" defer></script>
+<script src="js/themes/effects/claro.js" defer></script>
+<script src="js/themes/effects/escuro.js" defer></script>
+<script src="js/themes/effects/natal.js" defer></script>
+<script src="js/themes/effects/ano-novo.js" defer></script>
+<script src="js/themes/effects/pascoa.js" defer></script>
+<script src="js/themes/effects/festa-junina.js" defer></script>
+<script src="js/themes/effects/halloween.js" defer></script>
+<script src="js/themes/effects/terror.js" defer></script>
+<script src="js/themes/effects/cyberpunk.js" defer></script>
+<script src="js/themes/runtime.js" defer></script>
+<script src="js/themes/settings.js" defer></script>
+</body>
+</html>
