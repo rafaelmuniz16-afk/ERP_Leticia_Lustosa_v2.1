@@ -9,7 +9,9 @@ import {
   pararEscuta,
   falarResposta,
   pararFala,
-  estaFalando
+  estaFalando,
+  travarMicrofoneHardware,
+  liberarMicrofoneHardware
 } from './aurora/speech.js';
 
 let ctxApp = null;
@@ -81,7 +83,6 @@ function iniciarCicloEscutaModal() {
     },
     onTranscricao: (textoEmTempoReal) => {
       if (modalTranscript) modalTranscript.textContent = textoEmTempoReal;
-      // BARGE-IN: Se a Aurora estiver falando e voce comecar a falar, cala ela na hora!
       if (estaFalando()) {
         pararFala();
       }
@@ -185,10 +186,8 @@ export async function processarMensagemAurora(textoUsuario, viaVoz = false) {
         chatHistory.push({ role: 'user', content: textoUsuario });
         chatHistory.push({ role: 'assistant', content: textoFinal });
 
-        // NO CHAT DE TEXTO: Mostra a resposta completa, técnica e com tabelas
         appendMessage('bot', textoFinal);
 
-        // NA VOZ: Fala a versão resumida e executiva!
         if (viaVoz) {
           if (modalStatus) modalStatus.textContent = 'Aurora falando... (toque no orbe para pausar)';
           const modalTranscript = $('auroraVoiceTranscript');
@@ -232,18 +231,18 @@ export function inicializarAuroraAgent(contexto) {
   const btnFecharVoz = $('btnFecharVoz');
   const orbVoz = $('auroraVoiceOrb');
 
-  // FECHAR MODAL: Para IMEDIATAMENTE a fala e a escuta
+  // FECHAR: Desativa escuta, fala E LIBERA O MICROFONE NO WINDOWS
   if (btnFecharVoz && modalVoz) {
     btnFecharVoz.onclick = (e) => {
       e.stopPropagation();
       modoVozAtivo = false;
       pararFala();
       pararEscuta();
+      liberarMicrofoneHardware();
       modalVoz.classList.remove('active');
     };
   }
 
-  // TOQUE NO ORBE: Interrompe a fala na hora e volta a ouvir imediatamente!
   if (orbVoz) {
     orbVoz.style.cursor = 'pointer';
     orbVoz.onclick = () => {
@@ -260,12 +259,16 @@ export function inicializarAuroraAgent(contexto) {
     if (!suportaReconhecimento()) {
       btnVoz.style.display = 'none';
     } else {
-      btnVoz.onclick = (e) => {
+      btnVoz.onclick = async (e) => {
         e.preventDefault();
         pararFala();
 
         modoVozAtivo = true;
         if (modalVoz) modalVoz.classList.add('active');
+
+        // SEGURA O MICROFONE LIGADO DIRETO NO WINDOWS / ACER PURIFIEDVOICE
+        await travarMicrofoneHardware();
+
         iniciarCicloEscutaModal();
       };
     }
