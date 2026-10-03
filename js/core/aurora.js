@@ -31,8 +31,26 @@ function appendMessage(sender, text) {
   container.scrollTop = container.scrollHeight;
 }
 
-// Ponte que extrai os dados reais da ERP e entrega para o Aurora Agent
 function obterContextoERP() {
+  // Detector de chave vinda da aba Metas da Planilha (B9)
+  let chaveDetectada = '';
+  if (typeof metas !== 'undefined' && metas) {
+    if (metas.B9 && String(metas.B9).startsWith('gsk_')) chaveDetectada = String(metas.B9).trim();
+    else if (metas.b9 && String(metas.b9).startsWith('gsk_')) chaveDetectada = String(metas.b9).trim();
+    else {
+      for (const [k, v] of Object.entries(metas)) {
+        if (typeof v === 'string' && v.trim().startsWith('gsk_')) {
+          chaveDetectada = v.trim();
+          break;
+        }
+      }
+    }
+  }
+
+  if (chaveDetectada && typeof apiKey !== 'undefined') {
+    apiKey = chaveDetectada;
+  }
+
   return {
     $: typeof $ === 'function' ? $ : (id => document.getElementById(id)),
     bd: typeof bd !== 'undefined' ? bd : [],
@@ -48,12 +66,17 @@ function obterContextoERP() {
     validarDigitoCNJ: typeof validarDigitoCNJ === 'function' ? validarDigitoCNJ : (() => true),
     getTodayLocal: typeof getTodayLocal === 'function' ? getTodayLocal : (() => new Date().toISOString().split('T')[0]),
     getSelectedMonth: typeof getSelectedMonth === 'function' ? getSelectedMonth : (() => '10'),
+    getMesCorreto: typeof getMesCorreto === 'function' ? getMesCorreto : (r => r.mesReferencia),
     uid: typeof uid === 'function' ? uid : (() => Math.random().toString(36).slice(2)),
     renderLogs: typeof renderLogs === 'function' ? renderLogs : (() => {}),
     setCurrentPage: (p) => { if (typeof currentPage !== 'undefined') currentPage = p; },
-    serverMutation: typeof serverMutation === 'function' ? serverMutation : null,
+    serverMutation: typeof serverMutation === 'function' ? serverMutation : (window.serverMutation ? window.serverMutation : null),
+    loadCloud: typeof loadCloud === 'function' ? loadCloud : (window.loadCloud ? window.loadCloud : null),
     API_URL: typeof API_URL !== 'undefined' ? API_URL : '',
-    get apiKey() { return typeof apiKey !== 'undefined' ? apiKey : (localStorage.getItem(typeof AI_KEY !== 'undefined' ? AI_KEY : 'groq_api_key') || ''); },
+    get apiKey() { 
+      if (chaveDetectada) return chaveDetectada;
+      return typeof apiKey !== 'undefined' && apiKey ? apiKey : (localStorage.getItem(typeof AI_KEY !== 'undefined' ? AI_KEY : 'groq_api_key') || ''); 
+    },
     appendMessage,
     summarizeForAI,
     configAPIKey
@@ -61,7 +84,6 @@ function obterContextoERP() {
 }
 window.obterContextoERP = obterContextoERP;
 
-// Disparado ao clicar em enviar ou dar Enter
 async function processAI() {
   const input = $('chatInputText');
   if (!input) return;
@@ -70,11 +92,7 @@ async function processAI() {
 
   if (typeof window.processarMensagemAurora === 'function') {
     input.value = '';
-    return window.processarMensagemAurora(text);
-  }
-
-  if (typeof apiKey !== 'undefined' && !apiKey) {
-    await configAPIKey();
+    return window.processarMensagemAurora(text, false);
   }
 }
 
@@ -84,7 +102,7 @@ async function configAPIKey() {
     title: 'Chave Groq Cloud',
     input: 'password',
     inputValue: currentKey,
-    inputLabel: 'A chave fica salva neste navegador para ativar a Aurora.',
+    inputLabel: 'A chave pode vir da celula B9 da aba Metas na planilha ou salva manualmente aqui.',
     showCancelButton: true,
     confirmButtonText: 'Salvar',
     cancelButtonText: 'Cancelar',
