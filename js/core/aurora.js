@@ -1,6 +1,4 @@
-// js/core/aurora.js
-
-// ==== AURORA AI & CHAT (INTEGRAÇÃO OPERACIONAL) ====
+// js/core/aurora.js - Ponte Limpa para o Aurora Agent Moderno
 
 function summarizeForAI() {
   const by = {};
@@ -27,28 +25,24 @@ function appendMessage(sender, text) {
   wrap.className = 'msg-wrap ' + sender;
   const msg = document.createElement('div');
   msg.className = 'msg ' + sender;
-  
-  // Renderiza com segurança
   msg.innerHTML = typeof safeText === 'function' ? safeText(text) : text;
   wrap.appendChild(msg);
   container.appendChild(wrap);
   container.scrollTop = container.scrollHeight;
 }
 
-// Interceptador: quando o usuário clica em enviar ou dá Enter
+// Quando clicar em enviar ou der Enter, entrega direto para a Aurora nova
 async function processAI() {
   const input = $('chatInputText');
   if (!input) return;
   const text = input.value.trim();
   if (!text) return;
 
-  // Se a Aurora Agent moderna com Tool Calling já carregou, entrega para ela
   if (window.processarMensagemAurora) {
     input.value = '';
     return window.processarMensagemAurora(text);
   }
 
-  // Fallback caso a chave não esteja configurada ainda
   if (!apiKey) {
     await configAPIKey();
   }
