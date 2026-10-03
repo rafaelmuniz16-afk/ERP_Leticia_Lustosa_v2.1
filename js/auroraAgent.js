@@ -17,10 +17,10 @@ let chatHistory = [
   { role: 'assistant', content: 'Ola, Leticia! Eu sou a Aurora. Estou conectada ao ERP, pronta para operar o sistema, consultar dados e cadastrar casos por voz ou texto!' }
 ];
 
+// Modelos oficiais da Groq com suporte nativo a Tool Calling
 const MODELOS_GROQ = [
   'llama-3.3-70b-versatile',
-  'llama-3.1-8b-instant',
-  'qwen/qwen3.6-27b'
+  'llama-3.1-8b-instant'
 ];
 
 async function chamarGroqComTools(mensagens, apiKey, usarTools = true) {
@@ -52,9 +52,15 @@ async function chamarGroqComTools(mensagens, apiKey, usarTools = true) {
       if (!data.error) return data;
 
       ultimoErro = (data.error && data.error.message) ? data.error.message : 'Erro na Groq';
-      if ([429, 503].includes(res.status) || /quota|rate limit/i.test(ultimoErro)) {
+      console.warn(`[Aurora] Tentativa com modelo ${model} retornou:`, data.error);
+
+      // Se for limite de cota/minuto (429 ou 503), tenta o modelo reserva (8B)
+      if ([429, 503].includes(res.status) || /quota|rate limit|overloaded/i.test(ultimoErro)) {
         continue;
       }
+
+      // Se for outro erro (ex: chave invalida), para na hora
+      break;
     } catch (err) {
       ultimoErro = err.message;
     }
@@ -171,7 +177,6 @@ export function inicializarAuroraAgent(contexto) {
   ctxApp = contexto;
   const { $ } = contexto;
 
-  // Busca do botao de voz sem operadores que possam bugar na copia
   let btnVoz = $('btnVoiceInput');
   if (!btnVoz) {
     btnVoz = $('btnAiVoice');
