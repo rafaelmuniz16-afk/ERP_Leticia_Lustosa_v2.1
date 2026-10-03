@@ -24,8 +24,8 @@ export const AURORA_TOOLS = [
         type: "object",
         properties: {
           mes: { type: "string", description: "Dois digitos do mes de referencia (ex: '08', '09', '10')." },
-          tipo: { type: "string", description: "Tipo de encerramento ('Onus', 'Acordo', 'Exito' ou 'Todos')." },
-          panjud: { type: "string", description: "Status no Panjud: 'Sim' ou 'Nao'." },
+          tipo: { type: "string", enum: ["Ônus", "Acordo", "Êxito", "Todos"], description: "Tipo de encerramento." },
+          panjud: { type: "string", enum: ["Sim", "Não", "Todos"], description: "Status no Panjud." },
           termo: { type: "string", description: "Termo de busca para ID ou numero do processo." },
           limite: { type: "number", description: "Quantidade de casos a listar (maximo 5)." },
           ordem: { type: "string", enum: ["recente", "antigo"], description: "Ordenacao por data (padrao: 'recente')." }
@@ -60,8 +60,8 @@ export const AURORA_TOOLS = [
       parameters: {
         type: "object",
         properties: {
-          tipo: { type: "string", description: "Filtrar por tipo de encerramento ('Onus', 'Acordo', 'Exito' ou 'Todos')." },
-          panjud: { type: "string", description: "Filtrar por status no Panjud ('Sim', 'Nao' ou 'Todos')." },
+          tipo: { type: "string", enum: ["Ônus", "Acordo", "Êxito", "Todos"], description: "Filtrar por tipo." },
+          panjud: { type: "string", enum: ["Sim", "Não", "Todos"], description: "Filtrar por status no Panjud." },
           mes: { type: "string", description: "Dois digitos do mes de referencia (ex: '08', '09', '10')." },
           busca: { type: "string", description: "Termo de busca textual para ID ou numero de processo." }
         },
@@ -87,18 +87,18 @@ export const AURORA_TOOLS = [
     type: "function",
     function: {
       name: "cadastrarCaso",
-      description: "Cadastra um novo processo/caso diretamente na base de dados da ERP.",
+      description: "Cadastra um novo processo/caso na ERP. Sempre use com acentuacao estrita: 'Ônus', 'Acordo', 'Êxito' e 'Sim' ou 'Não'.",
       parameters: {
         type: "object",
         properties: {
-          id: { type: "string", description: "ID interno do caso/pasta." },
-          processo: { type: "string", description: "Numero do processo judicial (CNJ)." },
-          tipo: { type: "string", description: "Tipo de encerramento: 'Onus', 'Acordo' ou 'Exito'." },
+          id: { type: "string", description: "ID interno do caso." },
+          processo: { type: "string", description: "Numero do processo judicial (CNJ de 20 digitos)." },
+          tipo: { type: "string", enum: ["Ônus", "Acordo", "Êxito"], description: "Tipo com acento exato." },
           data: { type: "string", description: "Data no formato AAAA-MM-DD." },
           mesReferencia: { type: "string", description: "Dois digitos do mes de referencia (ex: '10')." },
-          panjud: { type: "string", description: "Se foi encerrado no Panjud: 'Sim' ou 'Nao'." },
-          recusado: { type: "string", description: "Se o encerramento foi recusado: 'Sim' ou 'Nao'." },
-          observacoes: { type: "string", description: "Observacoes adicionais do caso." }
+          panjud: { type: "string", enum: ["Sim", "Não"], description: "Encerrado no Panjud: Sim ou Não com til." },
+          recusado: { type: "string", enum: ["Sim", "Não"], description: "Recusado no Panjud: Sim ou Não com til." },
+          observacoes: { type: "string", description: "Observacoes adicionais." }
         },
         required: ["id", "processo", "tipo"]
       }
