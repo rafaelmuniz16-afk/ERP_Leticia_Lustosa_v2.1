@@ -14,7 +14,7 @@ import {
 
 let ctxApp = null;
 let chatHistory = [
-  { role: 'assistant', content: 'Olá, Letícia! Eu sou a Aurora. ✦ Estou conectada ao ERP, pronta para operar o sistema, consultar dados e cadastrar casos por voz ou texto!' }
+  { role: 'assistant', content: 'Ola, Leticia! Eu sou a Aurora. Estou conectada ao ERP, pronta para operar o sistema, consultar dados e cadastrar casos por voz ou texto!' }
 ];
 
 const MODELOS_GROQ = [
@@ -29,7 +29,7 @@ async function chamarGroqComTools(mensagens, apiKey, usarTools = true) {
   for (const model of MODELOS_GROQ) {
     try {
       const payload = {
-        model,
+        model: model,
         messages: mensagens,
         temperature: 0.1
       };
@@ -51,7 +51,7 @@ async function chamarGroqComTools(mensagens, apiKey, usarTools = true) {
       const data = await res.json();
       if (!data.error) return data;
 
-      ultimoErro = data.error.message || 'Erro na Groq';
+      ultimoErro = (data.error && data.error.message) ? data.error.message : 'Erro na Groq';
       if ([429, 503].includes(res.status) || /quota|rate limit/i.test(ultimoErro)) {
         continue;
       }
@@ -60,7 +60,7 @@ async function chamarGroqComTools(mensagens, apiKey, usarTools = true) {
     }
   }
 
-  throw new Error(ultimoErro || 'Nenhum modelo da Groq respondeu.');
+  throw new Error(ultimoErro ? ultimoErro : 'Nenhum modelo da Groq respondeu.');
 }
 
 export async function processarMensagemAurora(textoUsuario) {
@@ -82,8 +82,9 @@ export async function processarMensagemAurora(textoUsuario) {
   appendMessage('user', textoUsuario);
   chatHistory.push({ role: 'user', content: textoUsuario });
 
-  appendMessage('system', 'Consultando ERP…');
-  const indicadorCarregando = $('chatMessages')?.lastElementChild;
+  appendMessage('system', 'Consultando ERP...');
+  const containerMsgs = $('chatMessages');
+  const indicadorCarregando = containerMsgs ? containerMsgs.lastElementChild : null;
 
   const systemPrompt = gerarPromptSistema(summarizeForAI(), metas, memoriaIA);
   const mensagensParaEnvio = [
@@ -93,9 +94,11 @@ export async function processarMensagemAurora(textoUsuario) {
 
   try {
     const respostaGroq = await chamarGroqComTools(mensagensParaEnvio, apiKey, true);
-    indicadorCarregando?.remove();
+    if (indicadorCarregando && indicadorCarregando.parentNode) {
+      indicadorCarregando.remove();
+    }
 
-    const escolha = respostaGroq.choices?.[0]?.message;
+    const escolha = (respostaGroq.choices && respostaGroq.choices[0]) ? respostaGroq.choices[0].message : null;
     if (!escolha) throw new Error('Resposta vazia da Aurora.');
 
     if (escolha.tool_calls && escolha.tool_calls.length > 0) {
@@ -111,7 +114,7 @@ export async function processarMensagemAurora(textoUsuario) {
           args = {};
         }
 
-        appendMessage('system', `⚙️ Executando: ${nomeFerramenta}…`);
+        appendMessage('system', 'Executando acao: ' + nomeFerramenta + '...');
 
         try {
           const resultado = await executarFerramenta(nomeFerramenta, args, ctxApp);
@@ -135,25 +138,32 @@ export async function processarMensagemAurora(textoUsuario) {
         }
       }
 
-      appendMessage('system', 'Finalizando resposta…');
-      const ind2 = $('chatMessages')?.lastElementChild;
+      appendMessage('system', 'Finalizando resposta...');
+      const ind2 = containerMsgs ? containerMsgs.lastElementChild : null;
       
       const respostaFinal = await chamarGroqComTools(mensagensParaEnvio, apiKey, false);
-      ind2?.remove();
+      if (ind2 && ind2.parentNode) {
+        ind2.remove();
+      }
 
-      const textoFinal = respostaFinal.choices?.[0]?.message?.content || 'Ação concluída com sucesso!';
+      const textoFinal = (respostaFinal.choices && respostaFinal.choices[0] && respostaFinal.choices[0].message && respostaFinal.choices[0].message.content) 
+        ? respostaFinal.choices[0].message.content 
+        : 'Acao concluida com sucesso!';
+      
       chatHistory.push({ role: 'assistant', content: textoFinal });
       appendMessage('bot', textoFinal);
       falarResposta(textoFinal);
     } else {
-      const textoDireto = escolha.content || 'Compreendido!';
+      const textoDireto = escolha.content ? escolha.content : 'Compreendido!';
       chatHistory.push({ role: 'assistant', content: textoDireto });
       appendMessage('bot', textoDireto);
       falarResposta(textoDireto);
     }
   } catch (errGeral) {
-    indicadorCarregando?.remove();
-    appendMessage('bot', `Ops! Não consegui concluir o comando agora: ${errGeral.message}`);
+    if (indicadorCarregando && indicadorCarregando.parentNode) {
+      indicadorCarregando.remove();
+    }
+    appendMessage('bot', 'Ops! Nao consegui concluir o comando agora: ' + errGeral.message);
   }
 }
 
@@ -161,8 +171,12 @@ export function inicializarAuroraAgent(contexto) {
   ctxApp = contexto;
   const { $ } = contexto;
 
-  // Linha de selecao do botao de voz limpa sem caracteres especiais:
-  const btnVoz = $('btnVoiceInput') \vert{}\vert{}$('btnAiVoice');
+  // Busca do botao de voz sem operadores que possam bugar na copia
+  let btnVoz = $('btnVoiceInput');
+  if (!btnVoz) {
+    btnVoz = $('btnAiVoice');
+  }
+
   if (btnVoz) {
     if (!suportaReconhecimento()) {
       btnVoz.style.display = 'none';
@@ -182,7 +196,8 @@ export function inicializarAuroraAgent(contexto) {
             onResultado: (textoTranscrito) => {
               gravando = false;
               btnVoz.classList.remove('recording');
-              if ($('chatInputText'))$('chatInputText').value = textoTranscrito;
+              const inputChat = $('chatInputText');
+              if (inputChat) inputChat.value = textoTranscrito;
               processarMensagemAurora(textoTranscrito);
             },
             onErro: (erro) => {
@@ -225,7 +240,8 @@ export function inicializarAuroraAgent(contexto) {
     };
   }
 
-  if ($('chatMessages') && !$('chatMessages').children.length) {
+  const msgsBox = $('chatMessages');
+  if (msgsBox && !msgsBox.children.length) {
     chatHistory.forEach(m => {
       if (m.role === 'assistant' || m.role === 'user') {
         ctxApp.appendMessage(m.role === 'assistant' ? 'bot' : 'user', m.content);
@@ -235,7 +251,7 @@ export function inicializarAuroraAgent(contexto) {
 }
 
 function inicializarGlobal() {
-  const contexto = typeof window.obterContextoERP === 'function' ? window.obterContextoERP() : null;
+  const contexto = (typeof window.obterContextoERP === 'function') ? window.obterContextoERP() : null;
   if (contexto) {
     inicializarAuroraAgent(contexto);
   }
