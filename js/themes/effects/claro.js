@@ -71,7 +71,7 @@ const $=id=>document.getElementById(id);
           `,
           background: '#ffffff',
           backdrop: 'rgba(15, 23, 42, 0.45)',
-          confirmButtonText: 'Eu Te Amo Infinitamente, Rafa! 💖',
+          confirmButtonText: 'Eu Te Amo Infinitamente 💖',
           confirmButtonColor: '#2563eb',
           customClass: { popup: 'swal2-executive-light-popup' },
           willOpen: () => {
