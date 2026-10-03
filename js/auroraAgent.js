@@ -12,6 +12,8 @@ import {
 } from './aurora/speech.js';
 
 let ctxApp = null;
+let modoVozAtivo = false;
+
 let chatHistory = [
   { role: 'assistant', content: 'Ola, Leticia! Eu sou a Aurora. Estou conectada ao ERP, pronta para operar o sistema, consultar dados e cadastrar casos por voz ou texto!' }
 ];
@@ -47,6 +49,8 @@ async function chamarGroqComTools(mensagens, apiKey) {
       if (!data.error) return data;
 
       ultimoErro = (data.error && data.error.message) ? data.error.message : 'Erro na Groq';
+      console.warn(`[Aurora] Tentativa com ${model} retornou:`, data.error);
+
       if ([429, 503].includes(res.status) || /quota|rate limit/i.test(ultimoErro)) {
         continue;
       }
@@ -59,9 +63,38 @@ async function chamarGroqComTools(mensagens, apiKey) {
   throw new Error(ultimoErro || 'Nenhum modelo da Groq respondeu.');
 }
 
-/**
- * Processa a mensagem. Se viaVoz = true, sintetiza fala e atualiza o modal de voz.
- */
+// Inicia um novo ciclo de escuta contínua no pop-up
+function ouvirProximaFalaModal() {
+  if (!modoVozAtivo) return;
+
+  const modalStatus = ctxApp.$('auroraVoiceStatus');
+  const modalTranscript = ctxApp.$('auroraVoiceTranscript');
+
+  if (modalStatus) modalStatus.textContent = 'Ouvindo você…';
+  if (modalTranscript) modalTranscript.textContent = 'Pode falar o próximo comando…';
+
+  iniciarEscuta({
+    onInicio: () => {
+      if (modalStatus) modalStatus.textContent = 'Ouvindo…';
+    },
+    onResultado: (texto, isFinal) => {
+      if (modalTranscript) modalTranscript.textContent = texto;
+      if (isFinal && texto.trim()) {
+        if (modalStatus) modalStatus.textContent = 'Processando comando…';
+        processarMensagemAurora(texto.trim(), true);
+      }
+    },
+    onErro: (erro) => {
+      console.warn('Voz erro:', erro);
+      if (modoVozAtivo && modalStatus) {
+        modalStatus.textContent = 'Não ouvi bem, pode repetir?';
+        setTimeout(() => { if (modoVozAtivo) ouvirProximaFalaModal(); }, 1500);
+      }
+    },
+    onFim: () => {}
+  });
+}
+
 export async function processarMensagemAurora(textoUsuario, viaVoz = false) {
   if (!textoUsuario) return;
 
@@ -143,7 +176,7 @@ export async function processarMensagemAurora(textoUsuario, viaVoz = false) {
           }
         }
       } else {
-        // Concluiu!
+        // Resposta concluída
         if (indicadorCarregando && indicadorCarregando.parentNode) {
           indicadorCarregando.remove();
         }
@@ -154,17 +187,18 @@ export async function processarMensagemAurora(textoUsuario, viaVoz = false) {
 
         appendMessage('bot', textoFinal);
 
-        // SE FOI POR VOZ: Fala a resposta e fecha o modal ao terminar
         if (viaVoz) {
           if (modalStatus) modalStatus.textContent = 'Aurora falando…';
           const modalTranscript = $('auroraVoiceTranscript');
           if (modalTranscript) modalTranscript.textContent = textoFinal;
 
+          // Fala e, quando terminar, REINICIA A ESCUTA PARA CONTINUAR A CONVERSA!
           falarResposta(textoFinal, () => {
-            // Fecha o modal suavemente quando a fala terminar
-            setTimeout(() => {
-              $('auroraVoiceModal')?.classList.remove('active');
-            }, 1200);
+            if (modoVozAtivo) {
+              setTimeout(() => {
+                ouvirProximaFalaModal();
+              }, 400);
+            }
           });
         }
         return;
@@ -177,6 +211,7 @@ export async function processarMensagemAurora(textoUsuario, viaVoz = false) {
     appendMessage('bot', 'Ops! Nao consegui concluir o comando agora: ' + errGeral.message);
     if (viaVoz && modalStatus) {
       modalStatus.textContent = 'Erro ao processar';
+      setTimeout(() => { if (modoVozAtivo) ouvirProximaFalaModal(); }, 1500);
     }
   }
 }
@@ -185,21 +220,21 @@ export function inicializarAuroraAgent(contexto) {
   ctxApp = contexto;
   const { $ } = contexto;
 
-  const btnVoz = $('btnVoiceInput') || $('btnAiVoice');
+  const btnVoz = $('btnVoiceInput') \vert{}\vert{}$('btnAiVoice');
   const modalVoz = $('auroraVoiceModal');
   const btnFecharVoz = $('btnFecharVoz');
-  const modalStatus = $('auroraVoiceStatus');
-  const modalTranscript = $('auroraVoiceTranscript');
 
+  // Fechar o modal encerra a escuta e a fala
   if (btnFecharVoz && modalVoz) {
     btnFecharVoz.onclick = () => {
+      modoVozAtivo = false;
       pararEscuta();
       pararFala();
       modalVoz.classList.remove('active');
     };
   }
 
-  // 1. Controle do Botão de Microfone com o Pop-up
+  // 1. Botão do Microfone abre o Pop-up Contínuo
   if (btnVoz) {
     if (!suportaReconhecimento()) {
       btnVoz.style.display = 'none';
@@ -208,29 +243,9 @@ export function inicializarAuroraAgent(contexto) {
         e.preventDefault();
         pararFala();
         
-        // Abre o pop-up
+        modoVozAtivo = true;
         if (modalVoz) modalVoz.classList.add('active');
-        if (modalStatus) modalStatus.textContent = 'Ouvindo você…';
-        if (modalTranscript) modalTranscript.textContent = 'Pode falar o seu comando…';
-
-        iniciarEscuta({
-          onInicio: () => {
-            if (modalStatus) modalStatus.textContent = 'Ouvindo…';
-          },
-          onResultado: (texto, isFinal) => {
-            if (modalTranscript) modalTranscript.textContent = texto;
-            if (isFinal) {
-              pararEscuta();
-              if (modalStatus) modalStatus.textContent = 'Processando comando…';
-              processarMensagemAurora(texto, true); // true = MODO VOZ ATIVO
-            }
-          },
-          onErro: (erro) => {
-            console.warn('Erro de voz:', erro);
-            if (modalStatus) modalStatus.textContent = 'Não entendi bem…';
-          },
-          onFim: () => {}
-        });
+        ouvirProximaFalaModal();
       };
     }
   }
@@ -243,8 +258,8 @@ export function inicializarAuroraAgent(contexto) {
     if (!inputTexto) return;
     const txt = inputTexto.value.trim();
     if (txt) {
-      inputTexto.value = ''; // Limpa NA HORA o campo
-      processarMensagemAurora(txt, false); // false = MODO TEXTO (SEM ÁUDIO)
+      inputTexto.value = '';
+      processarMensagemAurora(txt, false);
     }
   };
 
