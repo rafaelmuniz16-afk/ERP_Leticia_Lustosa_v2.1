@@ -7,19 +7,62 @@ function renderStatus(c) {
   $('statusSub').textContent = c.reais + ' reais de ' + c.meta + ' necessários • faltam ' + Math.max(0, c.faltaReais);
 }
 
+// No js/core/render.js:
+
 function renderCharts(c) {
-  if(charts.tipos) charts.tipos.destroy();
+  if (charts.tipos) charts.tipos.destroy();
   charts.tipos = new Chart($('tiposChart'), {
     type: 'doughnut',
-    data: {labels: ['Ônus','Acordo','Êxito'], datasets: [{data: [c.onus, c.acordo, c.exito], backgroundColor: ['#dc3f5a','#d97706','#0f9f6e'], borderWidth: 0}]},
-    options: {responsive: true, maintainAspectRatio: false, cutout: '68%', plugins: {legend: {position: 'bottom', labels: {usePointStyle: true, boxWidth: 8, font: {size: 10}}}}}
+    data: {
+      labels: ['Ônus', 'Acordo', 'Êxito'],
+      datasets: [{
+        data: [c.onus, c.acordo, c.exito],
+        backgroundColor: ['#dc3f5a', '#d97706', '#0f9f6e'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '68%',
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { usePointStyle: true, boxWidth: 8, font: { size: 10 } }
+        }
+      }
+    }
   });
-  const days = Object.keys(c.perDay).sort((a,b) => parseInt(a) - parseInt(b));
-  if(charts.linha) charts.linha.destroy();
+
+  // BLINDAGEM: Se perDay não existir por qualquer motivo, usa objeto vazio sem travar
+  const mapaDias = (c && c.perDay) ? c.perDay : {};
+  const mesAtual = (c && c.month) ? c.month : getSelectedMonth();
+  const days = Object.keys(mapaDias).sort((a, b) => parseInt(a) - parseInt(b));
+
+  if (charts.linha) charts.linha.destroy();
   charts.linha = new Chart($('linhaChart'), {
     type: 'line',
-    data: {labels: days.map(d => d + '/' + c.month), datasets: [{data: days.map(d => c.perDay[d]), borderColor: '#4f46e5', backgroundColor: 'rgba(79,70,229,.12)', fill: true, tension: .32, pointRadius: 3, pointBackgroundColor: '#4f46e5'}]},
-    options: {responsive: true, maintainAspectRatio: false, plugins: {legend: {display: false}}, scales: {x: {grid: {display: false}, ticks: {font: {size: 9}}}, y: {beginAtZero: true, ticks: {stepSize: 1, font: {size: 9}}}}}
+    data: {
+      labels: days.map(d => d + '/' + mesAtual),
+      datasets: [{
+        data: days.map(d => mapaDias[d]),
+        borderColor: '#4f46e5',
+        backgroundColor: 'rgba(79,70,229,.12)',
+        fill: true,
+        tension: .32,
+        pointRadius: 3,
+        pointBackgroundColor: '#4f46e5'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 9 } } },
+        y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 9 } } }
+      }
+    }
   });
 }
 
