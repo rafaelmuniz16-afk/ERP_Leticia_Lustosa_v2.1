@@ -17,7 +17,7 @@ let chatHistory = [
   { role: 'assistant', content: 'Ola, Leticia! Eu sou a Aurora. Estou conectada ao ERP, pronta para operar o sistema, consultar dados e cadastrar casos por voz ou texto!' }
 ];
 
-// Modelos validados pelo Rafa
+// Seus modelos homologados
 const MODELOS_GROQ = [
   'openai/gpt-oss-20b',
   'openai/gpt-oss-120b'
@@ -80,32 +80,34 @@ export async function processarMensagemAurora(textoUsuario) {
 
   pararFala();
   appendMessage('user', textoUsuario);
-  chatHistory.push({ role: 'user', content: textoUsuario });
 
   appendMessage('system', 'Consultando ERP...');
   const containerMsgs = $('chatMessages');
   const indicadorCarregando = containerMsgs ? containerMsgs.lastElementChild : null;
 
   const systemPrompt = gerarPromptSistema(summarizeForAI(), metas, memoriaIA);
-  const mensagensParaEnvio = [
+
+  // Mantém apenas as últimas 4 mensagens de conversa limpa (sem JSONs pesados do passado)
+  const historicoEnxuto = chatHistory.slice(-4).filter(m => m.role === 'user' || m.role === 'assistant');
+
+  const mensagensTurno = [
     { role: 'system', content: systemPrompt },
-    ...chatHistory.slice(-10)
+    ...historicoEnxuto,
+    { role: 'user', content: textoUsuario }
   ];
 
   try {
     let passos = 0;
-    const maxPassos = 4;
+    const maxPassos = 3;
 
-    // Loop ReAct: A Aurora chama ferramentas e continua ate formular a resposta final
     while (passos < maxPassos) {
       passos++;
-      const respostaGroq = await chamarGroqComTools(mensagensParaEnvio, apiKey);
+      const respostaGroq = await chamarGroqComTools(mensagensTurno, apiKey);
       const escolha = (respostaGroq.choices && respostaGroq.choices[0]) ? respostaGroq.choices[0].message : null;
       if (!escolha) throw new Error('Resposta vazia da Aurora.');
 
       if (escolha.tool_calls && escolha.tool_calls.length > 0) {
-        mensagensParaEnvio.push(escolha);
-        chatHistory.push(escolha);
+        mensagensTurno.push(escolha);
 
         for (const chamada of escolha.tool_calls) {
           const nomeFerramenta = chamada.function.name;
@@ -120,32 +122,32 @@ export async function processarMensagemAurora(textoUsuario) {
 
           try {
             const resultado = await executarFerramenta(nomeFerramenta, args, ctxApp);
-            const msgTool = {
+            mensagensTurno.push({
               role: 'tool',
               tool_call_id: chamada.id,
               name: nomeFerramenta,
               content: typeof resultado === 'string' ? resultado : JSON.stringify(resultado)
-            };
-            mensagensParaEnvio.push(msgTool);
-            chatHistory.push(msgTool);
+            });
           } catch (errErroFerramenta) {
-            const msgErro = {
+            mensagensTurno.push({
               role: 'tool',
               tool_call_id: chamada.id,
               name: nomeFerramenta,
               content: JSON.stringify({ erro: errErroFerramenta.message })
-            };
-            mensagensParaEnvio.push(msgErro);
-            chatHistory.push(msgErro);
+            });
           }
         }
       } else {
-        // A Aurora concluiu as consultas e gerou a resposta definitiva em texto!
+        // Concluiu e formulou a resposta final
         if (indicadorCarregando && indicadorCarregando.parentNode) {
           indicadorCarregando.remove();
         }
         const textoFinal = escolha.content ? escolha.content : 'Compreendido!';
+
+        // Salva apenas texto limpo no histórico para nunca acumular tokens brutos
+        chatHistory.push({ role: 'user', content: textoUsuario });
         chatHistory.push({ role: 'assistant', content: textoFinal });
+
         appendMessage('bot', textoFinal);
         falarResposta(textoFinal);
         return;
