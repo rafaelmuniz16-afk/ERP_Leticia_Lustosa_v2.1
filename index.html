@@ -217,7 +217,14 @@
     <div class="ai-compose">
       <div class="compose-wrap">
         <textarea id="chatInputText" rows="1" placeholder="Ex.: cadastre o caso 123…"></textarea>
-        <button type="button" id="btnVoiceInput" class="icon-btn btn-voice" title="Falar por voz">🎙</button>
+        <!-- SUBSTITUA O BOTÃO DE MICROFONE ANTIGO POR ESTE: -->
+        <button type="button" id="btnVoiceInput" class="btn-voice-minimal" title="Falar com Aurora">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+            <line x1="12" y1="19" x2="12" y2="22"></line>
+          </svg>
+        </button>
         <button class="send-btn" id="btnChatSend">➤</button>
       </div>
     </div>
@@ -274,5 +281,17 @@
 <script src="js/themes/runtime.js" defer></script>
 <script src="js/themes/settings.js" defer></script>
 <script type="module" src="js/auroraAgent.js"></script>
+  <!-- POP-UP MINIMALISTA AURORA VOICE -->
+<div id="auroraVoiceModal" class="aurora-voice-backdrop" aria-hidden="true">
+  <div class="aurora-voice-card">
+    <button type="button" id="btnFecharVoz" class="aurora-voice-close" title="Fechar">✕</button>
+    <div class="aurora-voice-orb" id="auroraVoiceOrb">
+      <div class="aurora-voice-pulse"></div>
+      <div class="aurora-voice-core">✦</div>
+    </div>
+    <div class="aurora-voice-title" id="auroraVoiceStatus">Ouvindo você…</div>
+    <p class="aurora-voice-transcript" id="auroraVoiceTranscript">Pode falar o que você precisa no ERP…</p>
+  </div>
+</div>
 </body>
 </html>
