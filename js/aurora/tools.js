@@ -4,6 +4,25 @@ export const AURORA_TOOLS = [
   {
     type: "function",
     function: {
+      name: "consultarCasos",
+      description: "Consulta e lista os casos cadastrados no ERP com filtros por mes, tipo, panjud ou busca textual, ordenados por data.",
+      parameters: {
+        type: "object",
+        properties: {
+          mes: { type: "string", description: "Dois digitos do mes de referencia (ex: '08', '09', '10')." },
+          tipo: { type: "string", description: "Tipo de encerramento ('Onus', 'Acordo', 'Exito' ou 'Todos')." },
+          panjud: { type: "string", description: "Status no Panjud: 'Sim' ou 'Nao'." },
+          termo: { type: "string", description: "Termo de busca para ID ou numero do processo." },
+          limite: { type: "number", description: "Quantidade maxima de casos a listar (padrao 5)." },
+          ordem: { type: "string", enum: ["recente", "antigo"], description: "Ordenacao por data (padrao: 'recente')." }
+        },
+        required: []
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
       name: "navegarEcra",
       description: "Muda a visualizacao ou rola a tela para uma secao especifica da interface da ERP.",
       parameters: {
@@ -23,26 +42,14 @@ export const AURORA_TOOLS = [
     type: "function",
     function: {
       name: "filtrarTabela",
-      description: "Aplica filtros automaticos na tabela de encerramentos/historico.",
+      description: "Aplica filtros automaticos na tabela de encerramentos/historico na interface.",
       parameters: {
         type: "object",
         properties: {
-          tipo: {
-            type: "string",
-            description: "Filtrar por tipo de encerramento ('Onus', 'Acordo', 'Exito' ou 'Todos')."
-          },
-          panjud: {
-            type: "string",
-            description: "Filtrar por status no Panjud ('Sim', 'Nao' ou 'Todos')."
-          },
-          mes: {
-            type: "string",
-            description: "Dois digitos do mes de referencia (ex: '08', '09', '10')."
-          },
-          busca: {
-            type: "string",
-            description: "Termo de busca textual para ID ou numero de processo."
-          }
+          tipo: { type: "string", description: "Filtrar por tipo de encerramento ('Onus', 'Acordo', 'Exito' ou 'Todos')." },
+          panjud: { type: "string", description: "Filtrar por status no Panjud ('Sim', 'Nao' ou 'Todos')." },
+          mes: { type: "string", description: "Dois digitos do mes de referencia (ex: '08', '09', '10')." },
+          busca: { type: "string", description: "Termo de busca textual para ID ou numero de processo." }
         },
         required: []
       }
@@ -56,10 +63,7 @@ export const AURORA_TOOLS = [
       parameters: {
         type: "object",
         properties: {
-          mes: {
-            type: "string",
-            description: "Mes a consultar com dois digitos (ex: '08', '09', '10')."
-          }
+          mes: { type: "string", description: "Mes a consultar com dois digitos (ex: '08', '09', '10')." }
         },
         required: []
       }
