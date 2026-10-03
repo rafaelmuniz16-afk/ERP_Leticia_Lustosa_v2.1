@@ -28,8 +28,6 @@ function getFiltered() {
 // js/core/calculations.js
 
 function calculate(mesOverride = null) {
-  // Se a Aurora passar um mês específico (ex: '08', '10'), calcula sobre ele. 
-  // Se não passar nada, usa o mês selecionado no painel da tela.
   const month = (typeof mesOverride === 'string' && mesOverride) ? mesOverride.padStart(2, '0') : getSelectedMonth();
   const meta = parseNum(metas[month]);
   const rows = bd.filter(d => (typeof getMesCorreto === 'function' ? getMesCorreto(d) : d.mesReferencia) === month);
@@ -44,7 +42,21 @@ function calculate(mesOverride = null) {
   const faltaReais = meta - reais;
   const faltaQuant = meta - total;
 
+  // Monta a distribuição por dia para o gráfico de linhas (linhaChart)
+  const perDay = {};
+  rows.forEach(d => {
+    const rawData = (typeof normalizeDate === 'function') ? normalizeDate(d.data) : d.data;
+    if (rawData) {
+      const partes = String(rawData).split('-');
+      const diaNum = partes.length === 3 ? parseInt(partes[2], 10) : parseInt(rawData, 10);
+      if (!isNaN(diaNum)) {
+        perDay[diaNum] = (perDay[diaNum] ? perDay[diaNum] : 0) + 1;
+      }
+    }
+  });
+
   return {
+    month,
     meta,
     quant: total,
     totais,
@@ -55,7 +67,8 @@ function calculate(mesOverride = null) {
     exito,
     faltaReais,
     faltaQuant,
-    rows
+    rows,
+    perDay
   };
 }
 
