@@ -16,6 +16,7 @@ import {
 
 let ctxApp = null;
 let modoVozAtivo = false;
+let processandoRequisicao = false; // Trava contra chamadas simultaneas
 
 let chatHistory = [
   { role: 'assistant', content: 'Ola, Leticia! Eu sou a Aurora. Estou conectada ao ERP, pronta para operar o sistema, consultar dados e cadastrar casos por voz ou texto!' }
@@ -26,10 +27,39 @@ const MODELOS_GROQ = [
   'openai/gpt-oss-120b'
 ];
 
+/**
+ * Extrator inteligente da Chave Groq vinda da celula B9 / Metas da Planilha
+ */
+function extrairChaveGroqPlanilha(ctx) {
+  if (!ctx) return '';
+  const metasObj = ctx.metas ? ctx.metas : (window.metas ? window.metas : {});
+
+  // 1. Verifica chaves nominais diretas
+  if (metasObj.B9 && String(metasObj.B9).trim().startsWith('gsk_')) return String(metasObj.B9).trim();
+  if (metasObj.b9 && String(metasObj.b9).trim().startsWith('gsk_')) return String(metasObj.b9).trim();
+  if (metasObj.groqKey && String(metasObj.groqKey).trim()) return String(metasObj.groqKey).trim();
+  if (metasObj.chaveGroq && String(metasObj.chaveGroq).trim()) return String(metasObj.chaveGroq).trim();
+
+  // 2. Procura qualquer valor que comece com o prefixo oficial gsk_
+  for (const [k, v] of Object.entries(metasObj)) {
+    if (typeof v === 'string' && v.trim().startsWith('gsk_')) {
+      return v.trim();
+    }
+  }
+
+  // 3. Fallback para variavel global ou localStorage
+  if (ctx.apiKey && String(ctx.apiKey).trim()) return String(ctx.apiKey).trim();
+  return localStorage.getItem('groq_api_key') ? localStorage.getItem('groq_api_key') : '';
+}
+
 async function chamarGroqComTools(mensagens, apiKey) {
   let ultimoErro = '';
 
   for (const model of MODELOS_GROQ) {
+    // Timeout defensivo de 30 segundos
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
     try {
       const payload = {
         model: model,
@@ -45,23 +75,26 @@ async function chamarGroqComTools(mensagens, apiKey) {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ' + apiKey
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: controller.signal
       });
 
+      clearTimeout(timeoutId);
       const data = await res.json();
       if (!data.error) return data;
 
       ultimoErro = (data.error && data.error.message) ? data.error.message : 'Erro na Groq';
 
-      if ([429, 503].includes(res.status)) {
-        continue;
-      }
-      if (/quota|rate limit/i.test(ultimoErro)) {
-        continue;
-      }
+      if ([429, 503].includes(res.status)) continue;
+      if (/quota|rate limit/i.test(ultimoErro)) continue;
       break;
     } catch (err) {
-      ultimoErro = err.message;
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') {
+        ultimoErro = 'Tempo limite de comunicacao com a Groq excedido (30s).';
+      } else {
+        ultimoErro = err.message;
+      }
     }
   }
 
@@ -100,14 +133,29 @@ function iniciarCicloEscutaModal() {
 export async function processarMensagemAurora(textoUsuario, viaVoz = false) {
   if (!textoUsuario) return;
 
+  // Trava contra requisições simultâneas
+  if (processandoRequisicao) {
+    console.warn('[Aurora] Ja existe uma acao em andamento.');
+    return;
+  }
+  processandoRequisicao = true;
+
   if (typeof window.obterContextoERP === 'function') {
     ctxApp = window.obterContextoERP();
   }
 
-  if (!ctxApp) return;
-  const { $, apiKey, appendMessage, summarizeForAI, metas, memoriaIA, configAPIKey } = ctxApp;
+  if (!ctxApp) {
+    processandoRequisicao = false;
+    return;
+  }
+
+  const { $, appendMessage, summarizeForAI, metas, memoriaIA, configAPIKey } = ctxApp;
+
+  // Busca a chave diretamente da planilha (B9) antes de pedir
+  const apiKey = extrairChaveGroqPlanilha(ctxApp);
 
   if (!apiKey) {
+    processandoRequisicao = false;
     if (configAPIKey) await configAPIKey();
     return;
   }
@@ -135,7 +183,8 @@ export async function processarMensagemAurora(textoUsuario, viaVoz = false) {
 
   try {
     let passos = 0;
-    const maxPassos = 3;
+    const maxPassos = 5; // Limite saudável de etapas
+    let respostaConcluida = false;
 
     while (passos < maxPassos) {
       passos++;
@@ -178,6 +227,7 @@ export async function processarMensagemAurora(textoUsuario, viaVoz = false) {
           }
         }
       } else {
+        respostaConcluida = true;
         if (indicadorCarregando && indicadorCarregando.parentNode) {
           indicadorCarregando.remove();
         }
@@ -204,17 +254,23 @@ export async function processarMensagemAurora(textoUsuario, viaVoz = false) {
         return;
       }
     }
+
+    if (!respostaConcluida) {
+      throw new Error('A Aurora atingiu o limite de etapas sem produzir a resposta final.');
+    }
   } catch (errGeral) {
     if (indicadorCarregando && indicadorCarregando.parentNode) {
       indicadorCarregando.remove();
     }
-    appendMessage('bot', 'Ops! Nao consegui concluir o comando agora: ' + errGeral.message);
+    appendMessage('bot', 'Ops! Nao consegui concluir o comando: ' + errGeral.message);
     if (viaVoz && modalStatus) {
       modalStatus.textContent = 'Erro ao processar';
       setTimeout(() => {
         if (modoVozAtivo) iniciarCicloEscutaModal();
       }, 1500);
     }
+  } finally {
+    processandoRequisicao = false;
   }
 }
 
@@ -231,17 +287,30 @@ export function inicializarAuroraAgent(contexto) {
   const btnFecharVoz = $('btnFecharVoz');
   const orbVoz = $('auroraVoiceOrb');
 
-  // FECHAR: Desativa escuta, fala E LIBERA O MICROFONE NO WINDOWS
-  if (btnFecharVoz && modalVoz) {
+  function fecharModalVoz() {
+    modoVozAtivo = false;
+    pararFala();
+    pararEscuta();
+    liberarMicrofoneHardware();
+    if (modalVoz) {
+      modalVoz.classList.remove('active');
+      modalVoz.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  if (btnFecharVoz) {
     btnFecharVoz.onclick = (e) => {
       e.stopPropagation();
-      modoVozAtivo = false;
-      pararFala();
-      pararEscuta();
-      liberarMicrofoneHardware();
-      modalVoz.classList.remove('active');
+      fecharModalVoz();
     };
   }
+
+  // Acessibilidade: fecha com tecla Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modoVozAtivo) {
+      fecharModalVoz();
+    }
+  });
 
   if (orbVoz) {
     orbVoz.style.cursor = 'pointer';
@@ -264,11 +333,12 @@ export function inicializarAuroraAgent(contexto) {
         pararFala();
 
         modoVozAtivo = true;
-        if (modalVoz) modalVoz.classList.add('active');
+        if (modalVoz) {
+          modalVoz.classList.add('active');
+          modalVoz.setAttribute('aria-hidden', 'false');
+        }
 
-        // SEGURA O MICROFONE LIGADO DIRETO NO WINDOWS / ACER PURIFIEDVOICE
         await travarMicrofoneHardware();
-
         iniciarCicloEscutaModal();
       };
     }
