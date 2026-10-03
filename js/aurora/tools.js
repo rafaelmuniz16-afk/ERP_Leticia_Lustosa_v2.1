@@ -4,6 +4,20 @@ export const AURORA_TOOLS = [
   {
     type: "function",
     function: {
+      name: "consultarRankingDiario",
+      description: "Analisa qual dia do mes teve mais encerramentos, media diaria e ranking dos dias mais produtivos.",
+      parameters: {
+        type: "object",
+        properties: {
+          mes: { type: "string", description: "Dois digitos do mes de referencia (ex: '08', '09', '10')." }
+        },
+        required: []
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
       name: "consultarCasos",
       description: "Consulta e lista os casos cadastrados no ERP com filtros por mes, tipo, panjud ou busca textual, ordenados por data.",
       parameters: {
@@ -13,7 +27,7 @@ export const AURORA_TOOLS = [
           tipo: { type: "string", description: "Tipo de encerramento ('Onus', 'Acordo', 'Exito' ou 'Todos')." },
           panjud: { type: "string", description: "Status no Panjud: 'Sim' ou 'Nao'." },
           termo: { type: "string", description: "Termo de busca para ID ou numero do processo." },
-          limite: { type: "number", description: "Quantidade maxima de casos a listar (padrao 5)." },
+          limite: { type: "number", description: "Quantidade de casos a listar (maximo 5)." },
           ordem: { type: "string", enum: ["recente", "antigo"], description: "Ordenacao por data (padrao: 'recente')." }
         },
         required: []
