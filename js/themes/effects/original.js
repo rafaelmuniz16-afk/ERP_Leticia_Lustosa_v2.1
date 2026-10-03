@@ -59,7 +59,7 @@ const $=id=>document.getElementById(id);
           title: '<span style="font-family:Manrope,sans-serif;font-size:25px;font-weight:800;background:linear-gradient(135deg,#df6ba6,#9a78e7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:inline-block;animation:heartPulseTitle 1.2s infinite;">💖 TE AMO, LETÍCIA! 💖</span>',
           html: `
             <div class="romantic-photo-box">
-              <img src="${scope.photo}" alt="Rafa e Letícia" decoding="async">
+              <img src="${scope.photo}" alt="Te amo, Leticia" decoding="async">
             </div>
             <p style="font-size:14px; color:#6b4d70; font-weight:600; line-height:1.6; margin:14px 0 0;">
               Você achou o segredo! 💖<br>
@@ -96,7 +96,7 @@ const $=id=>document.getElementById(id);
         'Glitter e foco ativados! ✨',
         'A Letícia é a melhor do mundo! 🌸',
         'Tudo fica bem com unicórnios! 🦄',
-        'O Rafa te ama infinitamente! 💕',
+        'Eu te amo infinitamente! 💕',
         'Faltam ' + (10 - unicornClicks) + ' cliques para o segredo... 👀',
         'Você está quase descobrindo a surpresa... 🤫💖'
       ];
