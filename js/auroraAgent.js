@@ -66,7 +66,6 @@ async function chamarGroqComTools(mensagens, apiKey, usarTools = true) {
 export async function processarMensagemAurora(textoUsuario) {
   if (!textoUsuario) return;
 
-  // Atualiza o contexto em tempo real com os dados mais recentes do ERP
   if (typeof window.obterContextoERP === 'function') {
     ctxApp = window.obterContextoERP();
   }
@@ -162,6 +161,7 @@ export function inicializarAuroraAgent(contexto) {
   ctxApp = contexto;
   const { $ } = contexto;
 
+  // Linha de selecao do botao de voz limpa sem caracteres especiais:
   const btnVoz = $('btnVoiceInput') \vert{}\vert{}$('btnAiVoice');
   if (btnVoz) {
     if (!suportaReconhecimento()) {
