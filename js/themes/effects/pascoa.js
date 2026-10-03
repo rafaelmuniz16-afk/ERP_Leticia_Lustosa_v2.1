@@ -199,17 +199,17 @@ animateEaster();
           title: '<span style="font-family:Fredoka,cursive;font-size:26px;font-weight:700;color:#f472b6;display:inline-block;text-shadow:0 0 20px rgba(244,114,182,0.4);">🐰 OVO ENCANTADO: TE AMO, LETÍCIA! 💖</span>',
           html: `
             <div class="romantic-photo-box">
-              <img src="${scope.photo}" alt="Rafa e Letícia" decoding="async">
+              <img src="${scope.photo}" alt="O que trazes pra mim?" decoding="async">
             </div>
             <p style="font-size:14.5px; color:#503844; font-weight:600; line-height:1.65; margin:16px 0 0;">
               Você encontrou o ninho mais florido da Páscoa! 🐰🌷🥚<br>
               A sua luz, o seu sorriso e o seu coração transformam qualquer dia comum na mais doce celebração.<br>
               Sou o homem mais feliz do mundo por ter você ao meu lado em cada estação.<br>
-              <span style="color:#f472b6; font-size:16.5px; font-weight:800;">Letícia, eu te amo com todo o meu coração! 🌸💖</span>
+              <span style="color:#f472b6; font-size:16.5px; font-weight:800;">Letícia, eu te amo com todo o meu coração! 💖</span>
             </p>
           `,
           backdrop: 'rgba(80, 56, 68, 0.45)',
-          confirmButtonText: 'Eu te amo de montão! 🥹🌷',
+          confirmButtonText: 'Eu te amo de montão! 🌷',
           confirmButtonColor: '#f472b6',
           customClass: { popup: 'swal2-easter-popup' },
           willOpen: () => {
@@ -235,7 +235,7 @@ animateEaster();
         'Flores e cenourinhas pra você! 🌷',
         'Coelhinho da Páscoa que trazes pra mim? 🐰',
         'A Letícia é a mulher mais linda do mundo! 🌸',
-        'O Rafa te ama daqui até o céu! 💕',
+        'Eu te amo daqui até o céu! 💕',
         'Caça aos encerramentos ativada! 🥚',
         'Faltam ' + (10 - clickCount) + ' cliques para abrir o ninho... 👀',
         'O ninho tá quase pronto... 🤫🐰'
