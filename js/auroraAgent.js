@@ -246,3 +246,42 @@ export function inicializarAuroraAgent(contexto) {
     });
   }
 }
+// Auto-inicialização automática da Aurora com o ecossistema do ERP
+function inicializarGlobal() {
+  const helper$ = window.$ || ((id) => document.getElementById(id));
+
+  inicializarAuroraAgent({
+    $: helper$,
+    bd: window.bd,
+    metas: window.metas,
+    memoriaIA: window.memoriaIA,
+    calculate: window.calculate,
+    renderAll: window.renderAll,
+    updateMetaInput: window.updateMetaInput,
+    saveRecord: window.saveRecord,
+    registrarLog: window.registrarLog,
+    toast: window.toast,
+    formatarProcessoCNJ: window.formatarProcessoCNJ || ((p) => p),
+    validarDigitoCNJ: window.validarDigitoCNJ || (() => true),
+    getTodayLocal: window.getTodayLocal || (() => new Date().toISOString().split('T')[0]),
+    getSelectedMonth: window.getSelectedMonth || (() => '10'),
+    uid: window.uid || (() => Math.random().toString(36).slice(2)),
+    renderLogs: window.renderLogs,
+    setCurrentPage: (p) => { if (typeof window.currentPage !== 'undefined') window.currentPage = p; },
+    serverMutation: window.serverMutation,
+    API_URL: window.API_URL,
+    get apiKey() { return window.apiKey; },
+    appendMessage: window.appendMessage,
+    summarizeForAI: window.summarizeForAI,
+    configAPIKey: window.configAPIKey
+  });
+
+  // Torna a função acessível para o processAI e para o botão de voz
+  window.processarMensagemAurora = processarMensagemAurora;
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', inicializarGlobal);
+} else {
+  inicializarGlobal();
+}
