@@ -168,7 +168,7 @@ animateCyber();
             </p>
           `,
           backdrop: 'rgba(3, 6, 13, 0.88)',
-          confirmButtonText: 'Eu te amo na velocidade da luz! 🥹⚡',
+          confirmButtonText: 'Eu te amo na velocidade da luz! 🤖⚡💖',
           confirmButtonColor: '#00f3ff',
           customClass: { popup: 'swal2-cyber-popup' },
           willOpen: () => {
