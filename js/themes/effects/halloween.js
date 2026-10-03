@@ -164,7 +164,7 @@ animateSpooky();
           title: '<span style="font-family:Creepster,cursive;font-size:32px;font-weight:400;color:#ff781f;display:inline-block;text-shadow:0 0 25px rgba(255,120,31,0.6);letter-spacing:1px;">🎃 FEITIÇO ETERNO: TE AMO, LETÍCIA! 💜</span>',
           html: `
             <div class="romantic-photo-box">
-              <img src="${scope.photo}" alt="Rafa e Letícia" decoding="async">
+              <img src="${scope.photo}" alt="🎃🦇TE AMOOO🎃🦇" decoding="async">
             </div>
             <p style="font-size:14.5px; color:#ebdff7; font-weight:600; line-height:1.65; margin:16px 0 0;">
               Você encontrou o grande feitiço da abóbora! 🎃👻<br>
@@ -200,7 +200,7 @@ animateSpooky();
         'Gostosuras ou travessuras? 🍬',
         'Cuidado com os fantasmas da meta! 👻',
         'A Letícia bota o terror na concorrência! 🎃',
-        'O Rafa te ama mais que poção mágica! 💕',
+        'Eu te amo mais que poção mágica! 💕',
         'Abracadabra, meta batida! 🧙‍♀️',
         'Faltam ' + (10 - clickCount) + ' cliques para invocar o segredo... 👀',
         'O caldeirão tá quase fervendo... 🤫🎃'
