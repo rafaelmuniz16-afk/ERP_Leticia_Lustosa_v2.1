@@ -4,6 +4,18 @@ export const AURORA_TOOLS = [
   {
     type: "function",
     function: {
+      name: "sincronizarERP",
+      description: "Forca a sincronizacao e atualizacao completa dos dados da ERP diretamente com o Google Planilhas.",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: []
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
       name: "consultarRankingDiario",
       description: "Analisa qual dia do mes teve mais encerramentos, media diaria e ranking dos dias mais produtivos.",
       parameters: {
