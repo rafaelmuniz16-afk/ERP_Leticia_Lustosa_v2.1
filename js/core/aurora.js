@@ -32,30 +32,12 @@ function appendMessage(sender, text) {
 }
 
 function obterContextoERP() {
-  // Detector de chave vinda da aba Metas da Planilha (B9)
-  let chaveDetectada = '';
-  if (typeof metas !== 'undefined' && metas) {
-    if (metas.B9 && String(metas.B9).startsWith('gsk_')) chaveDetectada = String(metas.B9).trim();
-    else if (metas.b9 && String(metas.b9).startsWith('gsk_')) chaveDetectada = String(metas.b9).trim();
-    else {
-      for (const [k, v] of Object.entries(metas)) {
-        if (typeof v === 'string' && v.trim().startsWith('gsk_')) {
-          chaveDetectada = v.trim();
-          break;
-        }
-      }
-    }
-  }
-
-  if (chaveDetectada && typeof apiKey !== 'undefined') {
-    apiKey = chaveDetectada;
-  }
-
   return {
     $: typeof $ === 'function' ? $ : (id => document.getElementById(id)),
-    bd: typeof bd !== 'undefined' ? bd : [],
-    metas: typeof metas !== 'undefined' ? metas : {},
-    memoriaIA: typeof memoriaIA !== 'undefined' ? memoriaIA : [],
+    // GETTERS DINÂMICOS: se o loadCloud() recriar o bd, o agente pega o array novo na hora
+    get bd() { return typeof bd !== 'undefined' ? bd : []; },
+    get metas() { return typeof metas !== 'undefined' ? metas : {}; },
+    get memoriaIA() { return typeof memoriaIA !== 'undefined' ? memoriaIA : []; },
     calculate: typeof calculate === 'function' ? calculate : (() => ({})),
     renderAll: typeof renderAll === 'function' ? renderAll : (() => {}),
     updateMetaInput: typeof updateMetaInput === 'function' ? updateMetaInput : (() => {}),
@@ -73,9 +55,17 @@ function obterContextoERP() {
     serverMutation: typeof serverMutation === 'function' ? serverMutation : (window.serverMutation ? window.serverMutation : null),
     loadCloud: typeof loadCloud === 'function' ? loadCloud : (window.loadCloud ? window.loadCloud : null),
     API_URL: typeof API_URL !== 'undefined' ? API_URL : '',
-    get apiKey() { 
-      if (chaveDetectada) return chaveDetectada;
-      return typeof apiKey !== 'undefined' && apiKey ? apiKey : (localStorage.getItem(typeof AI_KEY !== 'undefined' ? AI_KEY : 'groq_api_key') || ''); 
+    get apiKey() {
+      // 1. Prioridade: Célula B9 da aba Metas na Planilha
+      if (typeof metas !== 'undefined' && metas) {
+        if (metas.B9 && String(metas.B9).startsWith('gsk_')) return String(metas.B9).trim();
+        if (metas.b9 && String(metas.b9).startsWith('gsk_')) return String(metas.b9).trim();
+        for (const [k, v] of Object.entries(metas)) {
+          if (typeof v === 'string' && v.trim().startsWith('gsk_')) return v.trim();
+        }
+      }
+      // 2. Fallback: chave no localStorage
+      return typeof apiKey !== 'undefined' && apiKey ? apiKey : (localStorage.getItem('groq_api_key') || '');
     },
     appendMessage,
     summarizeForAI,
@@ -84,6 +74,7 @@ function obterContextoERP() {
 }
 window.obterContextoERP = obterContextoERP;
 
+// O processAI() é o único manipulador oficial do envio do chat
 async function processAI() {
   const input = $('chatInputText');
   if (!input) return;
@@ -102,7 +93,7 @@ async function configAPIKey() {
     title: 'Chave Groq Cloud',
     input: 'password',
     inputValue: currentKey,
-    inputLabel: 'A chave pode vir da celula B9 da aba Metas na planilha ou salva manualmente aqui.',
+    inputLabel: 'A chave pode vir da célula B9 da aba Metas na planilha ou salva manualmente aqui.',
     showCancelButton: true,
     confirmButtonText: 'Salvar',
     cancelButtonText: 'Cancelar',
@@ -112,8 +103,8 @@ async function configAPIKey() {
   if (result.isConfirmed) {
     const novaChave = (result.value || '').trim();
     if (typeof apiKey !== 'undefined') apiKey = novaChave;
-    if (novaChave) localStorage.setItem(typeof AI_KEY !== 'undefined' ? AI_KEY : 'groq_api_key', novaChave);
-    else localStorage.removeItem(typeof AI_KEY !== 'undefined' ? AI_KEY : 'groq_api_key');
+    if (novaChave) localStorage.setItem('groq_api_key', novaChave);
+    else localStorage.removeItem('groq_api_key');
     if (typeof toast === 'function') toast('success', novaChave ? 'Chave salva com sucesso!' : 'Chave removida.');
     if ($('aiState')) $('aiState').textContent = novaChave ? 'Pronta para operar' : 'Aguardando chave Groq';
   }
