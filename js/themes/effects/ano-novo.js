@@ -296,7 +296,7 @@ animateFireworks();
         'Brinde à melhor mulher do mundo! 🥂',
         'Que 2026 venha com tudo! ✨',
         'Um ano novo de metas batidas! 🏆',
-        'O Rafa te ama pra sempre! 💕',
+        'Eu te ama pra sempre! 💕',
         'Paz, amor e muita prosperidade! 🍾',
         'Faltam ' + (10 - clickCount) + ' cliques para o grande brinde... 👀',
         'Quase lá pra surpresa da virada... 🤫🥂'
