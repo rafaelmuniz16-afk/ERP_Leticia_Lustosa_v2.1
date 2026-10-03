@@ -58,11 +58,11 @@ const $=id=>document.getElementById(id);
           title: '<span style="font-family:Manrope,sans-serif;font-size:24px;font-weight:800;background:linear-gradient(135deg,#0284c7,#db2777);-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:inline-block;letter-spacing:-0.5px;">PARA O MEU AMOR, LETÍCIA ✨💖</span>',
           html: `
             <div class="executive-photo-box">
-              <img src="${scope.photo}" alt="Rafa e Letícia" decoding="async">
+              <img src="${scope.photo}" alt="Te amo eternamente!" decoding="async">
             </div>
             <div style="font-size:13.5px; color:#475569; font-weight:500; line-height:1.7; margin:16px auto 0; max-width:440px; text-align:center;">
               Você desbloqueou o coração deste sistema... e o meu também! 🌟<br>
-              Letícia, ver a sua inteligência, determinação e foco profissional todos os dias me enche de orgulho e admiração.<br>
+              Ver a sua inteligência, determinação e foco profissional todos os dias me enche de orgulho e admiração.<br>
               Você é a pessoa mais incrível que já conheci, minha melhor parceira de vida e o meu maior amor.<br>
               <span style="color:#2563eb; font-size:15.5px; font-weight:800; display:inline-block; margin-top:8px;">
                 Eu te amo com todo o meu coração, hoje e para sempre! 💕🚀
@@ -71,7 +71,7 @@ const $=id=>document.getElementById(id);
           `,
           background: '#ffffff',
           backdrop: 'rgba(15, 23, 42, 0.45)',
-          confirmButtonText: 'Eu Te Amo Infinito, Rafa! 🥹💖',
+          confirmButtonText: 'Eu Te Amo Infinitamente, Rafa! 💖',
           confirmButtonColor: '#2563eb',
           customClass: { popup: 'swal2-executive-light-popup' },
           willOpen: () => {
@@ -96,7 +96,7 @@ const $=id=>document.getElementById(id);
       const msgs = [
         'Núcleo Gemini operando com excelência. ✦',
         'Produtividade e foco em nível máximo, Letícia! 📊',
-        'O Rafa tem um orgulho imenso de você! 💖',
+        'Eu tenho um orgulho imenso de você! 💖',
         'Conexão estável e métricas em ascensão! 🚀',
         'Você é brilhante em tudo que faz! ✨',
         'Protocolo de segurança: faltam ' + (10 - geminiClicks) + ' toques... 👀',
