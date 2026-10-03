@@ -16,10 +16,10 @@ import {
 
 let ctxApp = null;
 let modoVozAtivo = false;
-let processandoRequisicao = false; // Trava contra chamadas simultaneas
+let processandoRequisicao = false;
 
 let chatHistory = [
-  { role: 'assistant', content: 'Ola, Leticia! Eu sou a Aurora. Estou conectada ao ERP, pronta para operar o sistema, consultar dados e cadastrar casos por voz ou texto!' }
+  { role: 'assistant', content: 'Olá, Letícia! Eu sou a Aurora. Estou conectada ao ERP, pronta para operar o sistema, consultar dados e cadastrar casos por voz ou texto!' }
 ];
 
 const MODELOS_GROQ = [
@@ -27,36 +27,10 @@ const MODELOS_GROQ = [
   'openai/gpt-oss-120b'
 ];
 
-/**
- * Extrator inteligente da Chave Groq vinda da celula B9 / Metas da Planilha
- */
-function extrairChaveGroqPlanilha(ctx) {
-  if (!ctx) return '';
-  const metasObj = ctx.metas ? ctx.metas : (window.metas ? window.metas : {});
-
-  // 1. Verifica chaves nominais diretas
-  if (metasObj.B9 && String(metasObj.B9).trim().startsWith('gsk_')) return String(metasObj.B9).trim();
-  if (metasObj.b9 && String(metasObj.b9).trim().startsWith('gsk_')) return String(metasObj.b9).trim();
-  if (metasObj.groqKey && String(metasObj.groqKey).trim()) return String(metasObj.groqKey).trim();
-  if (metasObj.chaveGroq && String(metasObj.chaveGroq).trim()) return String(metasObj.chaveGroq).trim();
-
-  // 2. Procura qualquer valor que comece com o prefixo oficial gsk_
-  for (const [k, v] of Object.entries(metasObj)) {
-    if (typeof v === 'string' && v.trim().startsWith('gsk_')) {
-      return v.trim();
-    }
-  }
-
-  // 3. Fallback para variavel global ou localStorage
-  if (ctx.apiKey && String(ctx.apiKey).trim()) return String(ctx.apiKey).trim();
-  return localStorage.getItem('groq_api_key') ? localStorage.getItem('groq_api_key') : '';
-}
-
 async function chamarGroqComTools(mensagens, apiKey) {
   let ultimoErro = '';
 
   for (const model of MODELOS_GROQ) {
-    // Timeout defensivo de 30 segundos
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
 
@@ -91,7 +65,7 @@ async function chamarGroqComTools(mensagens, apiKey) {
     } catch (err) {
       clearTimeout(timeoutId);
       if (err.name === 'AbortError') {
-        ultimoErro = 'Tempo limite de comunicacao com a Groq excedido (30s).';
+        ultimoErro = 'Tempo limite de comunicação com a Groq excedido (30s).';
       } else {
         ultimoErro = err.message;
       }
@@ -107,21 +81,18 @@ function iniciarCicloEscutaModal() {
   const modalStatus = ctxApp.$('auroraVoiceStatus');
   const modalTranscript = ctxApp.$('auroraVoiceTranscript');
 
-  if (modalStatus) modalStatus.textContent = 'Ouvindo você...';
-  if (modalTranscript) modalTranscript.textContent = 'Pode falar o que precisa...';
+  if (modalStatus) modalStatus.textContent = 'Ouvindo você…';
+  if (modalTranscript) modalTranscript.textContent = 'Pode falar o que precisa…';
 
   iniciarEscuta({
     onInicio: () => {
-      if (modalStatus) modalStatus.textContent = 'Ouvindo...';
+      if (modalStatus) modalStatus.textContent = 'Ouvindo…';
     },
     onTranscricao: (textoEmTempoReal) => {
       if (modalTranscript) modalTranscript.textContent = textoEmTempoReal;
-      if (estaFalando()) {
-        pararFala();
-      }
     },
     onFalaFinal: (comandoPronto) => {
-      if (modalStatus) modalStatus.textContent = 'Processando comando...';
+      if (modalStatus) modalStatus.textContent = 'Processando comando…';
       processarMensagemAurora(comandoPronto, true);
     },
     onErro: (erro) => {
@@ -133,9 +104,8 @@ function iniciarCicloEscutaModal() {
 export async function processarMensagemAurora(textoUsuario, viaVoz = false) {
   if (!textoUsuario) return;
 
-  // Trava contra requisições simultâneas
   if (processandoRequisicao) {
-    console.warn('[Aurora] Ja existe uma acao em andamento.');
+    console.warn('[Aurora] Já existe uma requisição em andamento.');
     return;
   }
   processandoRequisicao = true;
@@ -149,10 +119,7 @@ export async function processarMensagemAurora(textoUsuario, viaVoz = false) {
     return;
   }
 
-  const { $, appendMessage, summarizeForAI, metas, memoriaIA, configAPIKey } = ctxApp;
-
-  // Busca a chave diretamente da planilha (B9) antes de pedir
-  const apiKey = extrairChaveGroqPlanilha(ctxApp);
+  const { $, apiKey, appendMessage, summarizeForAI, metas, memoriaIA, configAPIKey } = ctxApp;
 
   if (!apiKey) {
     processandoRequisicao = false;
@@ -169,7 +136,7 @@ export async function processarMensagemAurora(textoUsuario, viaVoz = false) {
 
   const modalStatus = $('auroraVoiceStatus');
   if (viaVoz && modalStatus) {
-    modalStatus.textContent = 'Pensando e consultando ERP...';
+    modalStatus.textContent = 'Pensando e consultando ERP…';
   }
 
   const systemPrompt = gerarPromptSistema(summarizeForAI(), metas, memoriaIA);
@@ -183,7 +150,7 @@ export async function processarMensagemAurora(textoUsuario, viaVoz = false) {
 
   try {
     let passos = 0;
-    const maxPassos = 5; // Limite saudável de etapas
+    const maxPassos = 5;
     let respostaConcluida = false;
 
     while (passos < maxPassos) {
@@ -204,9 +171,9 @@ export async function processarMensagemAurora(textoUsuario, viaVoz = false) {
             args = {};
           }
 
-          appendMessage('system', 'Executando acao: ' + nomeFerramenta + '...');
+          appendMessage('system', 'Executando ação: ' + nomeFerramenta + '...');
           if (viaVoz && modalStatus) {
-            modalStatus.textContent = 'Executando no ERP: ' + nomeFerramenta + '...';
+            modalStatus.textContent = 'Executando no ERP: ' + nomeFerramenta + '…';
           }
 
           try {
@@ -239,7 +206,7 @@ export async function processarMensagemAurora(textoUsuario, viaVoz = false) {
         appendMessage('bot', textoFinal);
 
         if (viaVoz) {
-          if (modalStatus) modalStatus.textContent = 'Aurora falando... (toque no orbe para pausar)';
+          if (modalStatus) modalStatus.textContent = 'Aurora falando… (clique no orbe para interromper)';
           const modalTranscript = $('auroraVoiceTranscript');
           if (modalTranscript) modalTranscript.textContent = textoFinal;
 
@@ -262,7 +229,7 @@ export async function processarMensagemAurora(textoUsuario, viaVoz = false) {
     if (indicadorCarregando && indicadorCarregando.parentNode) {
       indicadorCarregando.remove();
     }
-    appendMessage('bot', 'Ops! Nao consegui concluir o comando: ' + errGeral.message);
+    appendMessage('bot', 'Ops! Não consegui concluir o comando: ' + errGeral.message);
     if (viaVoz && modalStatus) {
       modalStatus.textContent = 'Erro ao processar';
       setTimeout(() => {
@@ -305,21 +272,22 @@ export function inicializarAuroraAgent(contexto) {
     };
   }
 
-  // Acessibilidade: fecha com tecla Escape
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && modoVozAtivo) {
       fecharModalVoz();
     }
   });
 
+  // TOQUE NO ORBE: Cala a fala imediatamente e REARMA O MICROFONE NA HORA SEM TRAVAR!
   if (orbVoz) {
     orbVoz.style.cursor = 'pointer';
     orbVoz.onclick = () => {
-      if (estaFalando()) {
-        pararFala();
-        if (modoVozAtivo) {
+      pararFala();
+      if (modoVozAtivo) {
+        // Dá um respiro de 120ms para o sintetizador liberar e arma a escuta limpinha
+        setTimeout(() => {
           iniciarCicloEscutaModal();
-        }
+        }, 120);
       }
     };
   }
@@ -344,33 +312,8 @@ export function inicializarAuroraAgent(contexto) {
     }
   }
 
-  const btnEnviar = $('btnChatSend');
-  const inputTexto = $('chatInputText');
-
-  const enviarTextoChat = () => {
-    if (!inputTexto) return;
-    const txt = inputTexto.value.trim();
-    if (txt) {
-      inputTexto.value = '';
-      processarMensagemAurora(txt, false);
-    }
-  };
-
-  if (btnEnviar) {
-    btnEnviar.onclick = (e) => {
-      e.preventDefault();
-      enviarTextoChat();
-    };
-  }
-
-  if (inputTexto) {
-    inputTexto.onkeydown = (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        enviarTextoChat();
-      }
-    };
-  }
+  // ELIMINADA DUPLICIDADE: Não adicionamos onclick/onkeydown aqui,
+  // pois o init.js já escuta o botão e delega para o processAI() perfeitamente!
 
   const msgsBox = $('chatMessages');
   if (msgsBox && !msgsBox.children.length) {
