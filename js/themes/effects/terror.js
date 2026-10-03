@@ -206,7 +206,7 @@ animateHorror();
             </p>
           `,
           backdrop: 'rgba(10, 0, 3, 0.92)',
-          confirmButtonText: 'Eu te amo eternamente! 🥹🩸',
+          confirmButtonText: 'Eu te amo eternamente! 🩸',
           confirmButtonColor: '#e6001a',
           customClass: { popup: 'swal2-horror-popup' },
           willOpen: () => {
@@ -225,8 +225,8 @@ animateHorror();
       const msgs = [
         'Eu nunca fecho meu olho... 👁️',
         'Você sente o calafrio? 🩸',
-        'A Letícia reina até no inferno! 💀',
-        'O Rafa te ama além da morte! 🖤',
+        'A Letícia reina até no submundo! 💀',
+        'Eu te amo além da morte! 🖤',
         'Ouço sussurros nas paredes... 🤫',
         'Faltam ' + (10 - clickCount) + ' toques para consumar o ritual... 👀',
         'O olho está prestes a sangrar... 🩸👁️'
