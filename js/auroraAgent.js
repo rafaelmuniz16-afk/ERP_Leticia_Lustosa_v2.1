@@ -23,9 +23,6 @@ const MODELOS_GROQ = [
   'qwen/qwen3.6-27b'
 ];
 
-/**
- * Função utilitária para chamar a API da Groq com suporte a Tool Calling.
- */
 async function chamarGroqComTools(mensagens, apiKey, usarTools = true) {
   let ultimoErro = '';
 
@@ -56,7 +53,7 @@ async function chamarGroqComTools(mensagens, apiKey, usarTools = true) {
 
       ultimoErro = data.error.message || 'Erro na Groq';
       if ([429, 503].includes(res.status) || /quota|rate limit/i.test(ultimoErro)) {
-        continue; // Tenta o modelo seguinte se bater no limite
+        continue;
       }
     } catch (err) {
       ultimoErro = err.message;
@@ -66,12 +63,15 @@ async function chamarGroqComTools(mensagens, apiKey, usarTools = true) {
   throw new Error(ultimoErro || 'Nenhum modelo da Groq respondeu.');
 }
 
-/**
- * Processamento principal da Aurora com Loop de Execução de Ferramentas.
- */
 export async function processarMensagemAurora(textoUsuario) {
-  if (!textoUsuario || !ctxApp) return;
+  if (!textoUsuario) return;
 
+  // Atualiza o contexto em tempo real com os dados mais recentes do ERP
+  if (typeof window.obterContextoERP === 'function') {
+    ctxApp = window.obterContextoERP();
+  }
+
+  if (!ctxApp) return;
   const { $, apiKey, appendMessage, summarizeForAI, metas, memoriaIA, configAPIKey } = ctxApp;
 
   if (!apiKey) {
@@ -79,28 +79,26 @@ export async function processarMensagemAurora(textoUsuario) {
     return;
   }
 
-  pararFala(); // Interrompe qualquer áudio anterior
+  pararFala();
   appendMessage('user', textoUsuario);
   chatHistory.push({ role: 'user', content: textoUsuario });
 
-  appendMessage('system', 'Pensando e consultando ERP…');
+  appendMessage('system', 'Consultando ERP…');
   const indicadorCarregando = $('chatMessages')?.lastElementChild;
 
   const systemPrompt = gerarPromptSistema(summarizeForAI(), metas, memoriaIA);
   const mensagensParaEnvio = [
     { role: 'system', content: systemPrompt },
-    ...chatHistory.slice(-10) // Mantém contexto recente enxuto
+    ...chatHistory.slice(-10)
   ];
 
   try {
-    // 1ª Chamada: IA avalia se responde direto ou chama ferramentas
     const respostaGroq = await chamarGroqComTools(mensagensParaEnvio, apiKey, true);
     indicadorCarregando?.remove();
 
     const escolha = respostaGroq.choices?.[0]?.message;
     if (!escolha) throw new Error('Resposta vazia da Aurora.');
 
-    // Se a IA decidiu acionar ferramentas no ERP
     if (escolha.tool_calls && escolha.tool_calls.length > 0) {
       mensagensParaEnvio.push(escolha);
       chatHistory.push(escolha);
@@ -118,14 +116,12 @@ export async function processarMensagemAurora(textoUsuario) {
 
         try {
           const resultado = await executarFerramenta(nomeFerramenta, args, ctxApp);
-          
           const msgTool = {
             role: 'tool',
             tool_call_id: chamada.id,
             name: nomeFerramenta,
             content: typeof resultado === 'string' ? resultado : JSON.stringify(resultado)
           };
-
           mensagensParaEnvio.push(msgTool);
           chatHistory.push(msgTool);
         } catch (errErroFerramenta) {
@@ -140,8 +136,7 @@ export async function processarMensagemAurora(textoUsuario) {
         }
       }
 
-      // 2ª Chamada: Envia os resultados das ferramentas para a Aurora gerar a resposta final
-      appendMessage('system', 'Sintetizando resposta…');
+      appendMessage('system', 'Finalizando resposta…');
       const ind2 = $('chatMessages')?.lastElementChild;
       
       const respostaFinal = await chamarGroqComTools(mensagensParaEnvio, apiKey, false);
@@ -152,7 +147,6 @@ export async function processarMensagemAurora(textoUsuario) {
       appendMessage('bot', textoFinal);
       falarResposta(textoFinal);
     } else {
-      // Resposta conversacional direta (sem ferramentas)
       const textoDireto = escolha.content || 'Compreendido!';
       chatHistory.push({ role: 'assistant', content: textoDireto });
       appendMessage('bot', textoDireto);
@@ -160,22 +154,18 @@ export async function processarMensagemAurora(textoUsuario) {
     }
   } catch (errGeral) {
     indicadorCarregando?.remove();
-    appendMessage('bot', `Ops! Não consegui concluir o comando agora. Detalhes: ${errGeral.message}`);
+    appendMessage('bot', `Ops! Não consegui concluir o comando agora: ${errGeral.message}`);
   }
 }
 
-/**
- * Inicializador da Aurora acoplado à aplicação.
- */
 export function inicializarAuroraAgent(contexto) {
   ctxApp = contexto;
   const { $ } = contexto;
 
-  // 1. Configura botão de microfone (Speech-to-Text)
   const btnVoz = $('btnVoiceInput') \vert{}\vert{}$('btnAiVoice');
   if (btnVoz) {
     if (!suportaReconhecimento()) {
-      btnVoz.style.display = 'none'; // Esconde se navegador for incompatível
+      btnVoz.style.display = 'none';
     } else {
       let gravando = false;
       btnVoz.addEventListener('click', () => {
@@ -210,7 +200,6 @@ export function inicializarAuroraAgent(contexto) {
     }
   }
 
-  // 2. Intercepta o envio do chat tradicional para usar o novo motor
   const btnEnviar = $('btnChatSend');
   const inputTexto = $('chatInputText');
 
@@ -236,7 +225,6 @@ export function inicializarAuroraAgent(contexto) {
     };
   }
 
-  // 3. Renderiza mensagem inicial de boas-vindas se estiver vazio
   if ($('chatMessages') && !$('chatMessages').children.length) {
     chatHistory.forEach(m => {
       if (m.role === 'assistant' || m.role === 'user') {
@@ -246,37 +234,11 @@ export function inicializarAuroraAgent(contexto) {
   }
 }
 
-// Auto-inicialização automática da Aurora com o ecossistema do ERP
 function inicializarGlobal() {
-  const helper$= window.$ || ((id) => document.getElementById(id));
-
-  inicializarAuroraAgent({
-    $: helper$,
-    bd: window.bd,
-    metas: window.metas,
-    memoriaIA: window.memoriaIA,
-    calculate: window.calculate,
-    renderAll: window.renderAll,
-    updateMetaInput: window.updateMetaInput,
-    saveRecord: window.saveRecord,
-    registrarLog: window.registrarLog,
-    toast: window.toast,
-    formatarProcessoCNJ: window.formatarProcessoCNJ || ((p) => p),
-    validarDigitoCNJ: window.validarDigitoCNJ || (() => true),
-    getTodayLocal: window.getTodayLocal || (() => new Date().toISOString().split('T')[0]),
-    getSelectedMonth: window.getSelectedMonth || (() => '10'),
-    uid: window.uid || (() => Math.random().toString(36).slice(2)),
-    renderLogs: window.renderLogs,
-    setCurrentPage: (p) => { if (typeof window.currentPage !== 'undefined') window.currentPage = p; },
-    serverMutation: window.serverMutation,
-    API_URL: window.API_URL,
-    get apiKey() { return window.apiKey; },
-    appendMessage: window.appendMessage,
-    summarizeForAI: window.summarizeForAI,
-    configAPIKey: window.configAPIKey
-  });
-
-  // Torna a função acessível para o processAI e para o botão de voz
+  const contexto = typeof window.obterContextoERP === 'function' ? window.obterContextoERP() : null;
+  if (contexto) {
+    inicializarAuroraAgent(contexto);
+  }
   window.processarMensagemAurora = processarMensagemAurora;
 }
 
