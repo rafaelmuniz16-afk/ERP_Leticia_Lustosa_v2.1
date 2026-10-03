@@ -25,22 +25,38 @@ function getFiltered() {
   return rows;
 }
 
-function calculate() {
-  const month = getSelectedMonth(), meta = parseNum($('metaInput').value), rows = bd.filter(d => getMesCorreto(d) === month);
-  let onus = 0, acordo = 0, exito = 0, recusados = 0, reais = 0, perDay = {};
-  rows.forEach(d => {
-    if(d.tipo === 'Ônus') onus++;
-    if(d.tipo === 'Acordo') acordo++;
-    if(d.tipo === 'Êxito') exito++;
-    if(d.recusado === 'Sim') recusados++;
-    if(d.panjud === 'Sim') reais++;
-    const dt = normalizeDate(d.data);
-    const dia = dt && dt.includes('-') ? dt.split('-')[2].slice(0,2) : '00';
-    perDay[dia] = (perDay[dia] || 0) + 1;
-  });
-  const quant = onus + acordo + exito, totais = quant - recusados;
-  const faltaQuant = meta - quant, faltaTotais = meta - totais, faltaReais = meta - reais;
-  return {month, meta, rows, onus, acordo, exito, recusados, reais, quant, totais, faltaQuant, faltaTotais, faltaReais, perDay};
+// js/core/calculations.js
+
+function calculate(mesOverride = null) {
+  // Se a Aurora passar um mês específico (ex: '08', '10'), calcula sobre ele. 
+  // Se não passar nada, usa o mês selecionado no painel da tela.
+  const month = (typeof mesOverride === 'string' && mesOverride) ? mesOverride.padStart(2, '0') : getSelectedMonth();
+  const meta = parseNum(metas[month]);
+  const rows = bd.filter(d => (typeof getMesCorreto === 'function' ? getMesCorreto(d) : d.mesReferencia) === month);
+
+  const total = rows.length;
+  const onus = rows.filter(d => d.tipo === 'Ônus').length;
+  const acordo = rows.filter(d => d.tipo === 'Acordo').length;
+  const exito = rows.filter(d => d.tipo === 'Êxito').length;
+  const recusados = rows.filter(d => d.recusado === 'Sim').length;
+  const reais = rows.filter(d => d.panjud === 'Sim').length;
+  const totais = total - recusados;
+  const faltaReais = meta - reais;
+  const faltaQuant = meta - total;
+
+  return {
+    meta,
+    quant: total,
+    totais,
+    reais,
+    recusados,
+    onus,
+    acordo,
+    exito,
+    faltaReais,
+    faltaQuant,
+    rows
+  };
 }
 
 function dailyTarget(falta, month) {
