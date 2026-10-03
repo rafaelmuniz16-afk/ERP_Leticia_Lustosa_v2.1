@@ -49,9 +49,12 @@ async function chamarGroqComTools(mensagens, apiKey) {
       if (!data.error) return data;
 
       ultimoErro = (data.error && data.error.message) ? data.error.message : 'Erro na Groq';
-      console.warn(`[Aurora] Tentativa com ${model} retornou:`, data.error);
+      console.warn('[Aurora] Tentativa com ' + model + ' retornou:', data.error);
 
-      if ([429, 503].includes(res.status) || /quota|rate limit/i.test(ultimoErro)) {
+      if ([429, 503].includes(res.status)) {
+        continue;
+      }
+      if (/quota|rate limit/i.test(ultimoErro)) {
         continue;
       }
       break;
@@ -60,27 +63,26 @@ async function chamarGroqComTools(mensagens, apiKey) {
     }
   }
 
-  throw new Error(ultimoErro || 'Nenhum modelo da Groq respondeu.');
+  throw new Error(ultimoErro ? ultimoErro : 'Nenhum modelo da Groq respondeu.');
 }
 
-// Inicia um novo ciclo de escuta contínua no pop-up
 function ouvirProximaFalaModal() {
   if (!modoVozAtivo) return;
 
   const modalStatus = ctxApp.$('auroraVoiceStatus');
   const modalTranscript = ctxApp.$('auroraVoiceTranscript');
 
-  if (modalStatus) modalStatus.textContent = 'Ouvindo você…';
-  if (modalTranscript) modalTranscript.textContent = 'Pode falar o próximo comando…';
+  if (modalStatus) modalStatus.textContent = 'Ouvindo você...';
+  if (modalTranscript) modalTranscript.textContent = 'Pode falar o próximo comando...';
 
   iniciarEscuta({
     onInicio: () => {
-      if (modalStatus) modalStatus.textContent = 'Ouvindo…';
+      if (modalStatus) modalStatus.textContent = 'Ouvindo...';
     },
     onResultado: (texto, isFinal) => {
       if (modalTranscript) modalTranscript.textContent = texto;
       if (isFinal && texto.trim()) {
-        if (modalStatus) modalStatus.textContent = 'Processando comando…';
+        if (modalStatus) modalStatus.textContent = 'Processando comando...';
         processarMensagemAurora(texto.trim(), true);
       }
     },
@@ -119,11 +121,11 @@ export async function processarMensagemAurora(textoUsuario, viaVoz = false) {
 
   const modalStatus = $('auroraVoiceStatus');
   if (viaVoz && modalStatus) {
-    modalStatus.textContent = 'Pensando e consultando ERP…';
+    modalStatus.textContent = 'Pensando e consultando ERP...';
   }
 
   const systemPrompt = gerarPromptSistema(summarizeForAI(), metas, memoriaIA);
-  const historicoEnxuto = chatHistory.slice(-4).filter(m => m.role === 'user' || m.role === 'assistant');
+  const historicoEnxuto = chatHistory.slice(-4).filter(m => ['user', 'assistant'].includes(m.role));
 
   const mensagensTurno = [
     { role: 'system', content: systemPrompt },
@@ -148,14 +150,14 @@ export async function processarMensagemAurora(textoUsuario, viaVoz = false) {
           const nomeFerramenta = chamada.function.name;
           let args = {};
           try {
-            args = JSON.parse(chamada.function.arguments || '{}');
+            args = JSON.parse(chamada.function.arguments ? chamada.function.arguments : '{}');
           } catch (e) {
             args = {};
           }
 
           appendMessage('system', 'Executando acao: ' + nomeFerramenta + '...');
           if (viaVoz && modalStatus) {
-            modalStatus.textContent = 'Executando no ERP: ' + nomeFerramenta + '…';
+            modalStatus.textContent = 'Executando no ERP: ' + nomeFerramenta + '...';
           }
 
           try {
@@ -176,7 +178,6 @@ export async function processarMensagemAurora(textoUsuario, viaVoz = false) {
           }
         }
       } else {
-        // Resposta concluída
         if (indicadorCarregando && indicadorCarregando.parentNode) {
           indicadorCarregando.remove();
         }
@@ -188,11 +189,10 @@ export async function processarMensagemAurora(textoUsuario, viaVoz = false) {
         appendMessage('bot', textoFinal);
 
         if (viaVoz) {
-          if (modalStatus) modalStatus.textContent = 'Aurora falando…';
+          if (modalStatus) modalStatus.textContent = 'Aurora falando...';
           const modalTranscript = $('auroraVoiceTranscript');
           if (modalTranscript) modalTranscript.textContent = textoFinal;
 
-          // Fala e, quando terminar, REINICIA A ESCUTA PARA CONTINUAR A CONVERSA!
           falarResposta(textoFinal, () => {
             if (modoVozAtivo) {
               setTimeout(() => {
@@ -220,11 +220,15 @@ export function inicializarAuroraAgent(contexto) {
   ctxApp = contexto;
   const { $ } = contexto;
 
-  const btnVoz = $('btnVoiceInput') \vert{}\vert{}$('btnAiVoice');
+  // Busca do botao de voz sem operador de barras verticais
+  let btnVoz = $('btnVoiceInput');
+  if (!btnVoz) {
+    btnVoz = $('btnAiVoice');
+  }
+
   const modalVoz = $('auroraVoiceModal');
   const btnFecharVoz = $('btnFecharVoz');
 
-  // Fechar o modal encerra a escuta e a fala
   if (btnFecharVoz && modalVoz) {
     btnFecharVoz.onclick = () => {
       modoVozAtivo = false;
@@ -234,7 +238,6 @@ export function inicializarAuroraAgent(contexto) {
     };
   }
 
-  // 1. Botão do Microfone abre o Pop-up Contínuo
   if (btnVoz) {
     if (!suportaReconhecimento()) {
       btnVoz.style.display = 'none';
@@ -242,7 +245,7 @@ export function inicializarAuroraAgent(contexto) {
       btnVoz.onclick = (e) => {
         e.preventDefault();
         pararFala();
-        
+
         modoVozAtivo = true;
         if (modalVoz) modalVoz.classList.add('active');
         ouvirProximaFalaModal();
@@ -250,7 +253,6 @@ export function inicializarAuroraAgent(contexto) {
     }
   }
 
-  // 2. Chat de Texto (Garante limpeza imediata e MODO SILENCIOSO)
   const btnEnviar = $('btnChatSend');
   const inputTexto = $('chatInputText');
 
@@ -282,7 +284,7 @@ export function inicializarAuroraAgent(contexto) {
   const msgsBox = $('chatMessages');
   if (msgsBox && !msgsBox.children.length) {
     chatHistory.forEach(m => {
-      if (m.role === 'assistant' || m.role === 'user') {
+      if (['assistant', 'user'].includes(m.role)) {
         ctxApp.appendMessage(m.role === 'assistant' ? 'bot' : 'user', m.content);
       }
     });
