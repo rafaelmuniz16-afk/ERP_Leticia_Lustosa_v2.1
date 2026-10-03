@@ -58,20 +58,20 @@ const $=id=>document.getElementById(id);
           title: '<span style="font-family:Fredoka,sans-serif;font-size:26px;font-weight:700;color:#d9381e;display:inline-block;text-shadow:0 2px 10px rgba(217,56,30,0.2);">💌 CORREIO ELEGANTE DE SÃO JOÃO 💌</span>',
           html: `
             <div class="correio-elegante-box">
-              <img src="${scope.photo}" alt="Rafa e Letícia no Arraiá" decoding="async">
+              <img src="${scope.photo}" alt="Lelê no Arraiá" decoding="async">
             </div>
             <div style="font-size:14px; color:#5c2406; font-weight:600; line-height:1.7; margin:16px auto 0; max-width:440px; text-align:center;">
               Olha a fogueira queimando o meu coração por você, Letícia! 🌽🔥<br>
               Nem toda sanfona do Nordeste, nem todo forró do Ceará consegue tocar uma música tão bonita quanto a nossa história juntos.<br>
               Você é a mulher mais talentosa, dedicada, doce e maravilhosa do mundo inteiro.<br>
               <span style="color:#d9381e; font-size:16.5px; font-weight:800; display:inline-block; margin-top:10px;">
-                O Rafa te ama mais do que milho com manteiga e forró de arrasta-pé! Te amo infinito, meu bem! 💖🤠🪗
+                Eu te amo mais do que milho com manteiga e forró de arrasta-pé! Te amo infinito, meu amor! 💖🤠🪗
               </span>
             </div>
           `,
           background: '#fffdf7',
           backdrop: 'rgba(69, 26, 3, 0.65)',
-          confirmButtonText: 'Eu Te Amo Sem Fim, Meu Caipira! 🥹💖🪗',
+          confirmButtonText: 'Eu Te Amo Sem Fim, Minha Chica Benta! 🥹💖🪗',
           confirmButtonColor: '#ea580c',
           customClass: { popup: 'swal2-junina-popup' },
           willOpen: () => {
@@ -97,7 +97,7 @@ const $=id=>document.getElementById(id);
         'Anarriê! Puxa o fole, Letícia! 🪗',
         'Olha a chuva de encerramento! ... É mentiraaa! 🌽',
         'A quadrilha jurídica mais afinada do Ceará! 🤠',
-        'O Rafa é doidinho de amor por você! 💖',
+        'Sou é doidinho de amor por você! 💖',
         'Fogueira acesa e metas batidas! 🔥',
         'Correio elegante: faltam ' + (10 - mascotClicks) + ' cliques... 👀',
         'Segredo junino se aproximando... 🤫🍿'
