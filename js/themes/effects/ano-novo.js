@@ -261,7 +261,7 @@ animateFireworks();
           title: '<span style="font-family:Cinzel,serif;font-size:24px;font-weight:900;color:#f5d179;display:inline-block;text-shadow:0 0 20px rgba(229,179,66,0.5);">✨ FELIZ ANO NOVO, MEU AMOR! ✨</span>',
           html: `
             <div class="romantic-photo-box">
-              <img src="${scope.photo}" alt="Rafa e Letícia" decoding="async">
+              <img src="${scope.photo}" alt="Te amo, Leticia! 💕" decoding="async">
             </div>
             <p style="font-size:14.5px; color:#f0f4fc; font-weight:600; line-height:1.65; margin:16px 0 0;">
               Você encontrou o segredo das taças da virada! 🥂🎆<br>
@@ -270,7 +270,7 @@ animateFireworks();
             </p>
           `,
           backdrop: 'rgba(3, 5, 10, 0.75)',
-          confirmButtonText: 'Eu te amo infinitamente! 🥹🥂',
+          confirmButtonText: 'Eu te amo infinitamente! 💖🥂',
           confirmButtonColor: '#bd8e2b',
           customClass: { popup: 'swal2-reveillon-popup' },
           willOpen: () => {
