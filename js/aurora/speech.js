@@ -4,35 +4,17 @@ const ReconhecimentoAPI = window.SpeechRecognition || window.webkitSpeechRecogni
 const sintetizador = 'speechSynthesis' in window ? window.speechSynthesis : null;
 
 let reconhecimentoAtivo = null;
-let vozHabilitada = true;
 
-/**
- * Verifica se o navegador atual suporta captura de microfone.
- */
 export function suportaReconhecimento() {
   return !!ReconhecimentoAPI;
 }
 
-/**
- * Permite ligar ou desligar a fala da Aurora (modo mudo/ativo).
- */
-export function alternarVoz(habilitar) {
-  vozHabilitada = !!habilitar;
-  if (!vozHabilitada && sintetizador) {
-    sintetizador.cancel();
-  }
-}
-
-/**
- * Inicia a escuta do microfone com callbacks de ciclo de vida.
- */
 export function iniciarEscuta({ onInicio, onResultado, onErro, onFim }) {
   if (!suportaReconhecimento()) {
-    if (onErro) onErro('Navegador não possui suporte para reconhecimento de voz.');
+    if (onErro) onErro('Navegador sem suporte a voz.');
     return null;
   }
 
-  // Interrompe qualquer escuta anterior aberta
   if (reconhecimentoAtivo) {
     try { reconhecimentoAtivo.abort(); } catch(e) {}
   }
@@ -40,19 +22,24 @@ export function iniciarEscuta({ onInicio, onResultado, onErro, onFim }) {
   const rec = new ReconhecimentoAPI();
   rec.lang = 'pt-BR';
   rec.continuous = false;
-  rec.interimResults = false;
+  rec.interimResults = true; // Permite ver a transcrição em tempo real enquanto fala
 
-  rec.onstart = () => {
-    if (onInicio) onInicio();
-  };
+  rec.onstart = () => { if (onInicio) onInicio(); };
 
   rec.onresult = (event) => {
-    const textoTranscrito = event.results[0]?.[0]?.transcript || '';
-    if (onResultado) onResultado(textoTranscrito);
+    let final = '';
+    let parcial = '';
+    for (let i = event.resultIndex; i < event.results.length; ++i) {
+      if (event.results[i].isFinal) {
+        final += event.results[i][0].transcript;
+      } else {
+        parcial += event.results[i][0].transcript;
+      }
+    }
+    if (onResultado) onResultado(final || parcial, !!final);
   };
 
   rec.onerror = (event) => {
-    console.warn('Erro de voz capturado:', event.error);
     if (onErro) onErro(event.error);
   };
 
@@ -65,16 +52,12 @@ export function iniciarEscuta({ onInicio, onResultado, onErro, onFim }) {
     rec.start();
     reconhecimentoAtivo = rec;
   } catch (err) {
-    console.error('Falha ao acionar microfone:', err);
     if (onErro) onErro(err.message);
   }
 
   return rec;
 }
 
-/**
- * Força a parada da escuta do microfone.
- */
 export function pararEscuta() {
   if (reconhecimentoAtivo) {
     try { reconhecimentoAtivo.stop(); } catch(e) {}
@@ -82,9 +65,6 @@ export function pararEscuta() {
   }
 }
 
-/**
- * Interrompe qualquer áudio em reprodução.
- */
 export function pararFala() {
   if (sintetizador) {
     sintetizador.cancel();
@@ -92,45 +72,48 @@ export function pararFala() {
 }
 
 /**
- * Sintetiza o texto em voz natural, limpando Markdown e termos técnicos.
+ * Fala com voz natural, sem robotização e em ritmo dinâmico.
  */
-export function falarResposta(textoOriginal) {
-  if (!sintetizador || !vozHabilitada || !textoOriginal) return;
+export function falarResposta(textoOriginal, onEnd) {
+  if (!sintetizador || !textoOriginal) return;
 
-  // Interrompe fala anterior imediatamente para não sobrepor
   sintetizador.cancel();
 
-  // Limpa marcações markdown, blocos JSON e símbolos antes de ler
-  const textoParaVoz = textoOriginal
-    .replace(/```[\s\S]*?```/g, '')  // remove blocos inteiros de código/JSON
-    .replace(/`.*?`/g, '')            // remove inline code
-    .replace(/\[(.*?)\]\(.*?\)/g, '$1') // simplifica links deixando apenas o rótulo
-    .replace(/[#*_~>•✦🏆✓]/g, '')     // limpa caracteres e emojis decorativos
-    .replace(/\n+/g, '. ')            // transforma quebras em pausas naturais
+  // Limpa caracteres técnicos
+  const textoLimpo = textoOriginal
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/`.*?`/g, '')
+    .replace(/[#*_~>•✦📌✓]/g, '')
+    .replace(/\n+/g, '. ')
     .trim();
 
-  if (!textoParaVoz) return;
+  if (!textoLimpo) return;
 
-  const utterance = new SpeechSynthesisUtterance(textoParaVoz);
+  const utterance = new SpeechSynthesisUtterance(textoLimpo);
   utterance.lang = 'pt-BR';
-  utterance.rate = 1.08; // Ritmo ágil e natural
-  utterance.pitch = 1.02;
+  utterance.rate = 1.25; // Ritmo fluido, natural e sem lentidão
+  utterance.pitch = 1.05;
 
-  // Seleciona voz brasileira de qualidade quando disponível
   const vozes = sintetizador.getVoices();
-  const vozBrasileira = vozes.find(v => 
-    v.lang.includes('pt') && (
-      v.name.includes('Luciana') || 
-      v.name.includes('Maria') || 
-      v.name.includes('Google') || 
-      v.name.includes('Francisca') ||
-      v.name.includes('Yara') ||
-      v.name.includes('Female')
-    )
-  ) || vozes.find(v => v.lang.includes('pt-BR')) || vozes.find(v => v.lang.includes('pt'));
 
-  if (vozBrasileira) {
-    utterance.voice = vozBrasileira;
+  // Prioridade absoluta para vozes Neurais, Online ou da Google (as mais humanas)
+  const vozNatural = vozes.find(v => v.lang.includes('pt') && (
+      v.name.includes('Natural') || 
+      v.name.includes('Neural') || 
+      v.name.includes('Online') ||
+      v.name.includes('Google') ||
+      v.name.includes('Francisca') ||
+      v.name.includes('Luciana')
+    )) || vozes.find(v => v.lang.includes('pt-BR') && !v.name.includes('Desktop'))
+       || vozes.find(v => v.lang.includes('pt-BR'))
+       || vozes.find(v => v.lang.includes('pt'));
+
+  if (vozNatural) {
+    utterance.voice = vozNatural;
+  }
+
+  if (onEnd) {
+    utterance.onend = onEnd;
   }
 
   sintetizador.speak(utterance);
