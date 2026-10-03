@@ -77,7 +77,7 @@ const $=id=>document.getElementById(id);
           html: `
             <div class="xmas-photo-box">
               <div class="xmas-ribbon">🎀</div>
-              <img src="${scope.photo}" alt="Rafa e Letícia no Natal" decoding="async">
+              <img src="${scope.photo}" alt="🎅É Nataaal🎄" decoding="async">
             </div>
             <p style="font-size:14px; color:#163623; font-weight:600; line-height:1.65; margin:14px 0 0;">
               Você encontrou o presente secreto do Papai Noel! 🎁❄️<br>
@@ -114,7 +114,7 @@ const $=id=>document.getElementById(id);
         'Ho Ho Ho! Feliz Natal adiantado! 🎅✨',
         'Muito foco e biscoitos natalinos! 🍪🎄',
         'A Letícia merece todos os presentes do trenó! 🎁💖',
-        'O melhor presente do Rafa é você! 🌟❤️',
+        'O meu melhor presente é você! 🌟❤️',
         'Magia de Natal ativada no ERP! ❄️✨',
         'Faltam ' + (10 - santaClicks) + ' cliques para o segredo de Natal... 🎅🎁',
         'O trenó do Polo Norte tá chegando perto... 🎄✨'
