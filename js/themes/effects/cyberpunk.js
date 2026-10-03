@@ -158,7 +158,7 @@ animateCyber();
           title: '<span style="font-family:Orbitron,sans-serif;font-size:24px;font-weight:900;color:#00f3ff;display:inline-block;text-shadow:0 0 25px rgba(0,243,255,0.7);letter-spacing:1px;">⚡ PROTOCOLO ETERNO: TE AMO, LETÍCIA! 💙</span>',
           html: `
             <div class="romantic-photo-box">
-              <img src="${scope.photo}" alt="Rafa e Letícia" decoding="async">
+              <img src="${scope.photo}" alt="Te amo muitão!" decoding="async">
             </div>
             <p style="font-size:15px; color:#d8e8fc; font-weight:600; line-height:1.65; margin:16px 0 0; font-family:'Rajdhani',sans-serif;">
               Você acessou o núcleo de dados secreto da matriz! 🤖⚡💙<br>
@@ -194,7 +194,7 @@ animateCyber();
         'Sinal neural 100% sincronizado! ⚡',
         'Processamento quântico ativado! 💾',
         'A Letícia hackeou meu coração! 🤖',
-        'O Rafa te ama em todas as matrizes! 💕',
+        'Eu te ama em todas as matrizes! 💕',
         'Overclock de produtividade ativo! 🚀',
         'Faltam ' + (10 - clickCount) + ' pulsos para a sobrecarga... 👀',
         'Compilando surpresa quântica... 🤫⚡'
