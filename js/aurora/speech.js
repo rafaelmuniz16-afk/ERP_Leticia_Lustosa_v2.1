@@ -7,50 +7,67 @@ let reconhecimentoAtivo = null;
 let timerSilencio = null;
 let bufferTexto = '';
 let escutaContinuaAtiva = false;
+let streamHardwareAudio = null;
 
 export function suportaReconhecimento() {
   return Boolean(ReconhecimentoAPI);
 }
 
 /**
- * Transforma respostas tecnicas e cheias de tabelas/codigos
- * em uma fala humana, concisa e 100% natural.
+ * TRAVA DE HARDWARE: Mantem o microfone e o Acer Voice Clean 
+ * permanentemente ligados no Windows enquanto o modal estiver aberto,
+ * evitando cortes no driver de audio.
  */
+export async function travarMicrofoneHardware() {
+  try {
+    if (!streamHardwareAudio && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      streamHardwareAudio = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
+    }
+  } catch (err) {
+    console.warn('[Voz] Nao foi possivel travar hardware:', err);
+  }
+}
+
+export function liberarMicrofoneHardware() {
+  if (streamHardwareAudio) {
+    try {
+      streamHardwareAudio.getTracks().forEach(track => track.stop());
+    } catch (e) {}
+    streamHardwareAudio = null;
+  }
+}
+
 export function limparTextoParaVoz(textoOriginal) {
   if (!textoOriginal) return '';
 
   let texto = textoOriginal;
 
-  // 1. Remove blocos de codigo e JSONs
   texto = texto.replace(/```[\s\S]*?```/g, '');
   texto = texto.replace(/`.*?`/g, '');
-
-  // 2. Remove formulas LaTeX (ex: \frac{354}{31}, \text{}, etc.)
   texto = texto.replace(/\\[a-zA-Z]+\{[^}]*\}\{[^}]*\}/g, '');
   texto = texto.replace(/\\[a-zA-Z]+\{[^}]*\}/g, '');
   texto = texto.replace(/\\[a-zA-Z]+/g, '');
 
-  // 3. Remove tabelas Markdown inteiras (qualquer linha com pipes | )
   const linhas = texto.split('\n');
   const linhasSemTabela = linhas.filter(l => !l.includes('|'));
   texto = linhasSemTabela.join(' ');
 
-  // 4. Converte simbolos matematicos para palavras faladas normais
   texto = texto.replace(/≈/g, ' aproximadamente ');
   texto = texto.replace(/÷/g, ' dividido por ');
   texto = texto.replace(/%/g, ' por cento ');
   texto = texto.replace(/\+/g, ' mais ');
 
-  // 5. Remove marcadores visuais (hashtags, asteriscos, tracos, emojis)
   texto = texto.replace(/[#*_~>•✓❌🚀💪📌✨✦]/g, '');
   texto = texto.replace(/\[\d+\]/g, '');
   texto = texto.replace(/[-]{2,}/g, '');
-
-  // 6. Limpa espacos excessivos
   texto = texto.replace(/\s+/g, ' ').trim();
 
-  // 7. FILTRO OBJETIVO DE VOZ: Se a resposta for um textao enorme,
-  // pega as 2 primeiras frases de conclusao e avisa que o resto ta na tela!
   const frases = texto.match(/[^.!?]+[.!?]+/g);
   if (frases && frases.length > 2) {
     const resumoFalado = frases.slice(0, 2).join(' ').trim();
@@ -83,6 +100,21 @@ export function iniciarEscuta({ onInicio, onTranscricao, onFalaFinal, onErro }) 
         if (onInicio) onInicio();
       };
 
+      // ENQUANTO VOCE ESTIVER EMITINDO SOM/FALANDO, NUNCA CORTA!
+      rec.onsoundstart = () => {
+        if (timerSilencio) {
+          clearTimeout(timerSilencio);
+          timerSilencio = null;
+        }
+      };
+
+      rec.onspeechstart = () => {
+        if (timerSilencio) {
+          clearTimeout(timerSilencio);
+          timerSilencio = null;
+        }
+      };
+
       rec.onresult = (event) => {
         let textoAtual = '';
         for (let i = 0; i < event.results.length; ++i) {
@@ -97,6 +129,7 @@ export function iniciarEscuta({ onInicio, onTranscricao, onFalaFinal, onErro }) 
 
         if (timerSilencio) clearTimeout(timerSilencio);
 
+        // Só inicia a contagem se você de fato parar de emitir voz por 2.8 segundos
         if (bufferTexto) {
           timerSilencio = setTimeout(() => {
             if (bufferTexto && escutaContinuaAtiva) {
@@ -105,7 +138,7 @@ export function iniciarEscuta({ onInicio, onTranscricao, onFalaFinal, onErro }) 
               pararEscutaInterna();
               if (onFalaFinal) onFalaFinal(comandoFinal);
             }
-          }, 2400);
+          }, 2800);
         }
       };
 
@@ -120,7 +153,8 @@ export function iniciarEscuta({ onInicio, onTranscricao, onFalaFinal, onErro }) 
       rec.onend = () => {
         reconhecimentoAtivo = null;
         if (escutaContinuaAtiva) {
-          setTimeout(iniciarInstancia, 250);
+          // Re-engata sem soltar o microfone
+          setTimeout(iniciarInstancia, 150);
         }
       };
 
@@ -128,7 +162,7 @@ export function iniciarEscuta({ onInicio, onTranscricao, onFalaFinal, onErro }) 
       reconhecimentoAtivo = rec;
     } catch (e) {
       if (escutaContinuaAtiva) {
-        setTimeout(iniciarInstancia, 400);
+        setTimeout(iniciarInstancia, 250);
       }
     }
   }
@@ -154,9 +188,6 @@ export function pararEscuta() {
   pararEscutaInterna();
 }
 
-/**
- * Corta o som imediatamente sem travar o navegador.
- */
 export function pararFala() {
   if (sintetizador) {
     sintetizador.cancel();
@@ -176,7 +207,6 @@ export function falarResposta(textoOriginal, onEnd) {
 
   pararFala();
 
-  // Aplica a faxina para falar apenas o que faz sentido em voz alta
   const textoLimpo = limparTextoParaVoz(textoOriginal);
 
   if (!textoLimpo) {
