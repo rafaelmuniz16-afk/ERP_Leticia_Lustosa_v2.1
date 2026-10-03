@@ -215,7 +215,6 @@ export function inicializarAuroraAgent(contexto) {
   const inputTexto = $('chatInputText');
 
   if (btnEnviar && inputTexto) {
-    // Substitui listeners clonando o nó ou tratando no evento
     btnEnviar.onclick = (e) => {
       e.preventDefault();
       const txt = inputTexto.value.trim();
@@ -246,9 +245,10 @@ export function inicializarAuroraAgent(contexto) {
     });
   }
 }
+
 // Auto-inicialização automática da Aurora com o ecossistema do ERP
 function inicializarGlobal() {
-  const helper$ = window.$ || ((id) => document.getElementById(id));
+  const helper$= window.$ || ((id) => document.getElementById(id));
 
   inicializarAuroraAgent({
     $: helper$,
