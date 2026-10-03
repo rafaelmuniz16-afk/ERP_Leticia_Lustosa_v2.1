@@ -12,6 +12,54 @@ export function suportaReconhecimento() {
   return Boolean(ReconhecimentoAPI);
 }
 
+/**
+ * Transforma respostas tecnicas e cheias de tabelas/codigos
+ * em uma fala humana, concisa e 100% natural.
+ */
+export function limparTextoParaVoz(textoOriginal) {
+  if (!textoOriginal) return '';
+
+  let texto = textoOriginal;
+
+  // 1. Remove blocos de codigo e JSONs
+  texto = texto.replace(/```[\s\S]*?```/g, '');
+  texto = texto.replace(/`.*?`/g, '');
+
+  // 2. Remove formulas LaTeX (ex: \frac{354}{31}, \text{}, etc.)
+  texto = texto.replace(/\\[a-zA-Z]+\{[^}]*\}\{[^}]*\}/g, '');
+  texto = texto.replace(/\\[a-zA-Z]+\{[^}]*\}/g, '');
+  texto = texto.replace(/\\[a-zA-Z]+/g, '');
+
+  // 3. Remove tabelas Markdown inteiras (qualquer linha com pipes | )
+  const linhas = texto.split('\n');
+  const linhasSemTabela = linhas.filter(l => !l.includes('|'));
+  texto = linhasSemTabela.join(' ');
+
+  // 4. Converte simbolos matematicos para palavras faladas normais
+  texto = texto.replace(/≈/g, ' aproximadamente ');
+  texto = texto.replace(/÷/g, ' dividido por ');
+  texto = texto.replace(/%/g, ' por cento ');
+  texto = texto.replace(/\+/g, ' mais ');
+
+  // 5. Remove marcadores visuais (hashtags, asteriscos, tracos, emojis)
+  texto = texto.replace(/[#*_~>•✓❌🚀💪📌✨✦]/g, '');
+  texto = texto.replace(/\[\d+\]/g, '');
+  texto = texto.replace(/[-]{2,}/g, '');
+
+  // 6. Limpa espacos excessivos
+  texto = texto.replace(/\s+/g, ' ').trim();
+
+  // 7. FILTRO OBJETIVO DE VOZ: Se a resposta for um textao enorme,
+  // pega as 2 primeiras frases de conclusao e avisa que o resto ta na tela!
+  const frases = texto.match(/[^.!?]+[.!?]+/g);
+  if (frases && frases.length > 2) {
+    const resumoFalado = frases.slice(0, 2).join(' ').trim();
+    return resumoFalado + ' Deixei o detalhamento e as tabelas completas na tela pra voce conferir!';
+  }
+
+  return texto;
+}
+
 export function iniciarEscuta({ onInicio, onTranscricao, onFalaFinal, onErro }) {
   if (!suportaReconhecimento()) {
     if (onErro) onErro('Navegador sem suporte a voz.');
@@ -43,14 +91,12 @@ export function iniciarEscuta({ onInicio, onTranscricao, onFalaFinal, onErro }) 
 
         bufferTexto = textoAtual.trim();
 
-        // Mostra o que você está falando em tempo real na tela
         if (onTranscricao && bufferTexto) {
           onTranscricao(bufferTexto);
         }
 
         if (timerSilencio) clearTimeout(timerSilencio);
 
-        // PACIÊNCIA DE 2.5 SEGUNDOS APÓS VOCÊ PARAR DE FALAR
         if (bufferTexto) {
           timerSilencio = setTimeout(() => {
             if (bufferTexto && escutaContinuaAtiva) {
@@ -59,15 +105,12 @@ export function iniciarEscuta({ onInicio, onTranscricao, onFalaFinal, onErro }) 
               pararEscutaInterna();
               if (onFalaFinal) onFalaFinal(comandoFinal);
             }
-          }, 2500);
+          }, 2400);
         }
       };
 
       rec.onerror = (event) => {
-        // Ignora erros normais de pausa ou cancelamento momentâneo
-        if (['no-speech', 'aborted'].includes(event.error)) {
-          return;
-        }
+        if (['no-speech', 'aborted'].includes(event.error)) return;
         if (event.error === 'not-allowed') {
           escutaContinuaAtiva = false;
           if (onErro) onErro('Permissao de microfone negada.');
@@ -76,7 +119,6 @@ export function iniciarEscuta({ onInicio, onTranscricao, onFalaFinal, onErro }) 
 
       rec.onend = () => {
         reconhecimentoAtivo = null;
-        // SE AINDA DEVERIA ESTAR ESCUTANDO (ex: você ficou pensando em silêncio), REINICIA NA HORA!
         if (escutaContinuaAtiva) {
           setTimeout(iniciarInstancia, 250);
         }
@@ -112,10 +154,18 @@ export function pararEscuta() {
   pararEscutaInterna();
 }
 
+/**
+ * Corta o som imediatamente sem travar o navegador.
+ */
 export function pararFala() {
   if (sintetizador) {
     sintetizador.cancel();
+    window._utteranceAtiva = null;
   }
+}
+
+export function estaFalando() {
+  return Boolean(sintetizador && sintetizador.speaking);
 }
 
 export function falarResposta(textoOriginal, onEnd) {
@@ -124,14 +174,10 @@ export function falarResposta(textoOriginal, onEnd) {
     return;
   }
 
-  sintetizador.cancel();
+  pararFala();
 
-  const textoLimpo = textoOriginal
-    .replace(/```[\s\S]*?```/g, '')
-    .replace(/`.*?`/g, '')
-    .replace(/[#*_~>•✦📌✓]/g, '')
-    .replace(/\n+/g, '. ')
-    .trim();
+  // Aplica a faxina para falar apenas o que faz sentido em voz alta
+  const textoLimpo = limparTextoParaVoz(textoOriginal);
 
   if (!textoLimpo) {
     if (onEnd) onEnd();
@@ -143,7 +189,6 @@ export function falarResposta(textoOriginal, onEnd) {
   utterance.rate = 1.25;
   utterance.pitch = 1.05;
 
-  // Previne o bug do Chrome de descartar a voz antes do fim
   window._utteranceAtiva = utterance;
 
   const vozes = sintetizador.getVoices();
