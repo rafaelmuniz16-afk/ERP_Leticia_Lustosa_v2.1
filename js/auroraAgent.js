@@ -19,8 +19,9 @@ let chatHistory = [
 
 // Modelos oficiais da Groq com suporte nativo a Tool Calling
 const MODELOS_GROQ = [
-  'llama-3.3-70b-versatile',
-  'llama-3.1-8b-instant'
+  'qwen/qwen3.8-27',
+  'openai/gpt-oss-20b',
+  'openai/gpt-oss-120b'
 ];
 
 async function chamarGroqComTools(mensagens, apiKey, usarTools = true) {
