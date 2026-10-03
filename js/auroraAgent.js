@@ -8,7 +8,8 @@ import {
   iniciarEscuta,
   pararEscuta,
   falarResposta,
-  pararFala
+  pararFala,
+  estaFalando
 } from './aurora/speech.js';
 
 let ctxApp = null;
@@ -79,8 +80,11 @@ function iniciarCicloEscutaModal() {
       if (modalStatus) modalStatus.textContent = 'Ouvindo...';
     },
     onTranscricao: (textoEmTempoReal) => {
-      // Mostra as palavras aparecendo na hora enquanto você fala
       if (modalTranscript) modalTranscript.textContent = textoEmTempoReal;
+      // BARGE-IN: Se a Aurora estiver falando e voce comecar a falar, cala ela na hora!
+      if (estaFalando()) {
+        pararFala();
+      }
     },
     onFalaFinal: (comandoPronto) => {
       if (modalStatus) modalStatus.textContent = 'Processando comando...';
@@ -181,14 +185,15 @@ export async function processarMensagemAurora(textoUsuario, viaVoz = false) {
         chatHistory.push({ role: 'user', content: textoUsuario });
         chatHistory.push({ role: 'assistant', content: textoFinal });
 
+        // NO CHAT DE TEXTO: Mostra a resposta completa, técnica e com tabelas
         appendMessage('bot', textoFinal);
 
+        // NA VOZ: Fala a versão resumida e executiva!
         if (viaVoz) {
-          if (modalStatus) modalStatus.textContent = 'Aurora falando...';
+          if (modalStatus) modalStatus.textContent = 'Aurora falando... (toque no orbe para pausar)';
           const modalTranscript = $('auroraVoiceTranscript');
           if (modalTranscript) modalTranscript.textContent = textoFinal;
 
-          // Fala a resposta e REABRE A ESCUTA automaticamente quando terminar
           falarResposta(textoFinal, () => {
             if (modoVozAtivo) {
               setTimeout(() => {
@@ -206,7 +211,7 @@ export async function processarMensagemAurora(textoUsuario, viaVoz = false) {
     }
     appendMessage('bot', 'Ops! Nao consegui concluir o comando agora: ' + errGeral.message);
     if (viaVoz && modalStatus) {
-      modalStatus.textContent = 'Erro ao processar comando';
+      modalStatus.textContent = 'Erro ao processar';
       setTimeout(() => {
         if (modoVozAtivo) iniciarCicloEscutaModal();
       }, 1500);
@@ -225,13 +230,29 @@ export function inicializarAuroraAgent(contexto) {
 
   const modalVoz = $('auroraVoiceModal');
   const btnFecharVoz = $('btnFecharVoz');
+  const orbVoz = $('auroraVoiceOrb');
 
+  // FECHAR MODAL: Para IMEDIATAMENTE a fala e a escuta
   if (btnFecharVoz && modalVoz) {
-    btnFecharVoz.onclick = () => {
+    btnFecharVoz.onclick = (e) => {
+      e.stopPropagation();
       modoVozAtivo = false;
-      pararEscuta();
       pararFala();
+      pararEscuta();
       modalVoz.classList.remove('active');
+    };
+  }
+
+  // TOQUE NO ORBE: Interrompe a fala na hora e volta a ouvir imediatamente!
+  if (orbVoz) {
+    orbVoz.style.cursor = 'pointer';
+    orbVoz.onclick = () => {
+      if (estaFalando()) {
+        pararFala();
+        if (modoVozAtivo) {
+          iniciarCicloEscutaModal();
+        }
+      }
     };
   }
 
