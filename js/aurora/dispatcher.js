@@ -5,10 +5,34 @@ export async function executarFerramenta(nome, args, ctx) {
 
   switch (nome) {
     // -------------------------------------------------------------
-    // CONSULTA DIRETA DE CASOS NO BANCO DE DADOS
+    // RANKING E DIA MAIS PRODUTIVO (SUPER LEVE EM TOKENS)
+    // -------------------------------------------------------------
+    case 'consultarRankingDiario': {
+      const mAlvo = String(args.mes || getSelectedMonth()).padStart(2, '0');
+      const lista = (Array.isArray(bd) ? bd : []).filter(r => String(r.mesReferencia || '').padStart(2, '0') === mAlvo);
+      
+      const porDia = {};
+      lista.forEach(r => {
+        const dia = r.data || 'Sem data';
+        porDia[dia] = (porDia[dia] || 0) + 1;
+      });
+
+      const ordenado = Object.entries(porDia).sort((a, b) => b[1] - a[1]);
+      const melhor = ordenado[0] ? { data: ordenado[0][0], totalCasos: ordenado[0][1] } : null;
+
+      return JSON.stringify({
+        mesReferencia: mAlvo,
+        totalCasosNoMes: lista.length,
+        diaCampeao: melhor,
+        rankingTop3: ordenado.slice(0, 3).map(([data, total]) => ({ data, total }))
+      });
+    }
+
+    // -------------------------------------------------------------
+    // CONSULTA DE CASOS (ENXUTA E LIMITADA A 5 CASOS MAX)
     // -------------------------------------------------------------
     case 'consultarCasos': {
-      const { mes, tipo, panjud, termo, limite = 5, ordem = 'recente' } = args;
+      const { mes, tipo, panjud, termo, limite = 3, ordem = 'recente' } = args;
       let lista = Array.isArray(bd) ? [...bd] : [];
 
       if (mes) {
@@ -32,21 +56,19 @@ export async function executarFerramenta(nome, args, ctx) {
         return ordem === 'recente' ? dB - dA : dA - dB;
       });
 
-      const max = Number(limite) || 5;
+      // Trava de segurança: nunca entrega mais de 5 casos para não estourar tokens
+      const max = Math.min(Number(limite) || 3, 5);
       const casosFiltrados = lista.slice(0, max).map(r => ({
         id: r.id,
         processo: r.processo,
         tipo: r.tipo,
         data: r.data,
-        mesReferencia: r.mesReferencia,
-        panjud: r.panjud,
-        recusado: r.recusado,
-        observacoes: r.observacoes || ''
+        mes: r.mesReferencia,
+        panjud: r.panjud
       }));
 
       return JSON.stringify({
         totalEncontrados: lista.length,
-        retornados: casosFiltrados.length,
         casos: casosFiltrados
       });
     }
@@ -62,8 +84,7 @@ export async function executarFerramenta(nome, args, ctx) {
         return 'Abri a janela flutuante de auditoria na tela.';
       }
 
-      const secaoId = destino;
-      const elemento = $(secaoId);
+      const elemento = $(destino);
       if (elemento) {
         elemento.scrollIntoView({ behavior: 'smooth', block: 'start' });
         if (destino === 'cadastro') {
@@ -71,7 +92,7 @@ export async function executarFerramenta(nome, args, ctx) {
         }
         return `Naveguei com sucesso ate a secao de ${destino}.`;
       }
-      return `Nao encontrei o elemento da secao ${destino} na pagina.`;
+      return `Nao encontrei a secao ${destino} na pagina.`;
     }
 
     case 'filtrarTabela': {
@@ -85,7 +106,7 @@ export async function executarFerramenta(nome, args, ctx) {
       }
       if (ctx.setCurrentPage) ctx.setCurrentPage(1);
       renderAll();
-      return 'Filtros aplicados com sucesso na tabela de encerramentos.';
+      return 'Filtros aplicados com sucesso na tabela.';
     }
 
     case 'consultarMetricas': {
@@ -93,17 +114,12 @@ export async function executarFerramenta(nome, args, ctx) {
       const c = calculate();
       return JSON.stringify({
         mes: mesConsultado,
-        metaDefinida: c.meta,
-        reaisPanjud: c.reais,
-        totaisLiquidos: c.totais,
-        totalBruto: c.quant,
+        meta: c.meta,
+        reais: c.reais,
+        totais: c.totais,
         recusados: c.recusados,
-        onus: c.onus,
-        acordos: c.acordo,
-        exitos: c.exito,
-        faltaParaMeta: Math.max(0, c.faltaReais),
-        metaBatida: c.faltaReais <= 0,
-        mediaDiariaNecessaria: $('meta_diaria')?.textContent || 'Consulte o painel'
+        faltaMeta: Math.max(0, c.faltaReais),
+        metaBatida: c.faltaReais <= 0
       });
     }
 
