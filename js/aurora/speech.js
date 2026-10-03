@@ -8,16 +8,12 @@ let timerSilencio = null;
 let bufferTexto = '';
 let escutaContinuaAtiva = false;
 let streamHardwareAudio = null;
+let cancelouFalaManual = false;
 
 export function suportaReconhecimento() {
   return Boolean(ReconhecimentoAPI);
 }
 
-/**
- * TRAVA DE HARDWARE: Mantem o microfone e o Acer Voice Clean 
- * permanentemente ligados no Windows enquanto o modal estiver aberto,
- * evitando cortes no driver de audio.
- */
 export async function travarMicrofoneHardware() {
   try {
     if (!streamHardwareAudio && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -30,7 +26,7 @@ export async function travarMicrofoneHardware() {
       });
     }
   } catch (err) {
-    console.warn('[Voz] Nao foi possivel travar hardware:', err);
+    console.warn('[Voz] Hardware lock não disponível:', err);
   }
 }
 
@@ -71,7 +67,7 @@ export function limparTextoParaVoz(textoOriginal) {
   const frases = texto.match(/[^.!?]+[.!?]+/g);
   if (frases && frases.length > 2) {
     const resumoFalado = frases.slice(0, 2).join(' ').trim();
-    return resumoFalado + ' Deixei o detalhamento e as tabelas completas na tela pra voce conferir!';
+    return resumoFalado + ' Deixei o detalhamento e as tabelas completas na tela pra você conferir!';
   }
 
   return texto;
@@ -100,7 +96,6 @@ export function iniciarEscuta({ onInicio, onTranscricao, onFalaFinal, onErro }) 
         if (onInicio) onInicio();
       };
 
-      // ENQUANTO VOCE ESTIVER EMITINDO SOM/FALANDO, NUNCA CORTA!
       rec.onsoundstart = () => {
         if (timerSilencio) {
           clearTimeout(timerSilencio);
@@ -129,7 +124,6 @@ export function iniciarEscuta({ onInicio, onTranscricao, onFalaFinal, onErro }) 
 
         if (timerSilencio) clearTimeout(timerSilencio);
 
-        // Só inicia a contagem se você de fato parar de emitir voz por 2.8 segundos
         if (bufferTexto) {
           timerSilencio = setTimeout(() => {
             if (bufferTexto && escutaContinuaAtiva) {
@@ -138,7 +132,7 @@ export function iniciarEscuta({ onInicio, onTranscricao, onFalaFinal, onErro }) 
               pararEscutaInterna();
               if (onFalaFinal) onFalaFinal(comandoFinal);
             }
-          }, 2800);
+          }, 2600);
         }
       };
 
@@ -146,14 +140,13 @@ export function iniciarEscuta({ onInicio, onTranscricao, onFalaFinal, onErro }) 
         if (['no-speech', 'aborted'].includes(event.error)) return;
         if (event.error === 'not-allowed') {
           escutaContinuaAtiva = false;
-          if (onErro) onErro('Permissao de microfone negada.');
+          if (onErro) onErro('Permissão de microfone negada.');
         }
       };
 
       rec.onend = () => {
         reconhecimentoAtivo = null;
         if (escutaContinuaAtiva) {
-          // Re-engata sem soltar o microfone
           setTimeout(iniciarInstancia, 150);
         }
       };
@@ -167,7 +160,8 @@ export function iniciarEscuta({ onInicio, onTranscricao, onFalaFinal, onErro }) 
     }
   }
 
-  iniciarInstancia();
+  // Pequeno intervalo para o navegador desarmar instâncias antigas antes de subir a nova
+  setTimeout(iniciarInstancia, 60);
 }
 
 function pararEscutaInterna() {
@@ -177,7 +171,12 @@ function pararEscutaInterna() {
   }
   if (reconhecimentoAtivo) {
     try {
-      reconhecimentoAtivo.stop();
+      // Remove os listeners antigos para evitar que o onend antigo interfira na nova instância
+      reconhecimentoAtivo.onstart = null;
+      reconhecimentoAtivo.onresult = null;
+      reconhecimentoAtivo.onerror = null;
+      reconhecimentoAtivo.onend = null;
+      reconhecimentoAtivo.abort();
     } catch (e) {}
     reconhecimentoAtivo = null;
   }
@@ -189,6 +188,7 @@ export function pararEscuta() {
 }
 
 export function pararFala() {
+  cancelouFalaManual = true; // Sinaliza interrupção intencional
   if (sintetizador) {
     sintetizador.cancel();
     window._utteranceAtiva = null;
@@ -206,6 +206,7 @@ export function falarResposta(textoOriginal, onEnd) {
   }
 
   pararFala();
+  cancelouFalaManual = false; // Novo ciclo de fala
 
   const textoLimpo = limparTextoParaVoz(textoOriginal);
 
@@ -238,12 +239,14 @@ export function falarResposta(textoOriginal, onEnd) {
 
   utterance.onend = () => {
     window._utteranceAtiva = null;
-    if (onEnd) onEnd();
+    // SÓ reabre a escuta automática se a fala terminou naturalmente (não foi interrompida pelo clique no orbe)
+    if (!cancelouFalaManual && onEnd) {
+      onEnd();
+    }
   };
 
   utterance.onerror = () => {
     window._utteranceAtiva = null;
-    if (onEnd) onEnd();
   };
 
   sintetizador.speak(utterance);
