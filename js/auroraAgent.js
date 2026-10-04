@@ -139,8 +139,25 @@ export async function processarMensagemAurora(textoUsuario, viaVoz = false) {
     modalStatus.textContent = 'Pensando e consultando ERP…';
   }
 
-  const systemPrompt = gerarPromptSistema(summarizeForAI(), metas, memoriaIA);
-  const historicoEnxuto = chatHistory.slice(-4).filter(m => ['user', 'assistant'].includes(m.role));
+  // Captura data e mês atuais para cálculo automático de projeção
+  const dataHoje = (typeof ctxApp.getTodayLocal === 'function')
+    ? ctxApp.getTodayLocal()
+    : new Date().toISOString().split('T')[0];
+
+  const mesSelecionado = (typeof ctxApp.getSelectedMonth === 'function')
+    ? ctxApp.getSelectedMonth()
+    : '10';
+
+  const systemPrompt = gerarPromptSistema(
+    summarizeForAI(),
+    metas,
+    memoriaIA,
+    dataHoje,
+    mesSelecionado
+  );
+
+  // Histórico com 6 mensagens para manter o contexto de confirmação afiado
+  const historicoEnxuto = chatHistory.slice(-6).filter(m => ['user', 'assistant'].includes(m.role));
 
   const mensagensTurno = [
     { role: 'system', content: systemPrompt },
@@ -278,13 +295,11 @@ export function inicializarAuroraAgent(contexto) {
     }
   });
 
-  // TOQUE NO ORBE: Cala a fala imediatamente e REARMA O MICROFONE NA HORA SEM TRAVAR!
   if (orbVoz) {
     orbVoz.style.cursor = 'pointer';
     orbVoz.onclick = () => {
       pararFala();
       if (modoVozAtivo) {
-        // Dá um respiro de 120ms para o sintetizador liberar e arma a escuta limpinha
         setTimeout(() => {
           iniciarCicloEscutaModal();
         }, 120);
@@ -311,9 +326,6 @@ export function inicializarAuroraAgent(contexto) {
       };
     }
   }
-
-  // ELIMINADA DUPLICIDADE: Não adicionamos onclick/onkeydown aqui,
-  // pois o init.js já escuta o botão e delega para o processAI() perfeitamente!
 
   const msgsBox = $('chatMessages');
   if (msgsBox && !msgsBox.children.length) {
