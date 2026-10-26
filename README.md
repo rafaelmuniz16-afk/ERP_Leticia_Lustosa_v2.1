@@ -1,3 +1,7 @@
+> **Versão histórica (arquivo de referência).** O código-fonte desta versão permanece disponível neste repositório e em seu histórico de commits. O site publicado desta versão redireciona automaticamente para o [ERP v2.1.1](https://rafaelmuniz16-afk.github.io/ERP_Leticia_Lustosa_v2.1.1/).
+
+---
+
 # ERP Letícia Lustosa — projeto modular
 
 Projeto completo extraído da versão revisada do ERP de Encerramentos 2026. Os dez temas, componentes, regras, integrações, cálculos e comportamentos foram preservados.
